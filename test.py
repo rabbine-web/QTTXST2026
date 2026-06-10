@@ -84,7 +84,7 @@ def checkType2Target(state):
                 else:
                     left = state[r][c-1]
 
-                if right == '1' and left == '0':
+                if right == '1' and left == '1':
                     return True
     return False
         
@@ -105,6 +105,7 @@ if (temp == "Yes" or temp == "yes"):
     type1Sources = []
     type2Sources = []
     type2Targets = []
+    survivingStates = []
 
     binaryTime = 0
     matrixTime = 0
@@ -122,13 +123,15 @@ if (temp == "Yes" or temp == "yes"):
         start = time.perf_counter()
         if checkType1Source(matrix):
             type1Sources.append(state)
-        if checkType1Target(matrix):
+        elif checkType1Target(matrix):
             type1Targets.append(state)
-        if checkType2Source(matrix):
+        elif checkType2Source(matrix):
             type2Sources.append(state)
-        if checkType2Target(matrix):
+        elif checkType2Target(matrix):
             type2Targets.append(state)
-        
+        else:
+            survivingStates.append(state)
+
         checkTime += time.perf_counter() - start
 
 print("\nTiming data")
@@ -136,3 +139,6 @@ print("\nIt took", binaryTime, "seconds to convert the states into binary")
 print("\nIt took", matrixTime, "seconds to convert the states into a matrix")
 print("\nIt took", checkTime, "seconds to check the types of states")
 print("\nIt took", binaryTime + matrixTime + checkTime, "seconds in total.")
+
+for state in survivingStates:
+    print(bin(state)[2:].zfill((n-1) * k ))
