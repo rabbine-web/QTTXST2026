@@ -1,6 +1,8 @@
 import matplotlib.pyplot as plt
 import matplotlib.lines as mlines
+
 from itertools import product
+from pathlib import Path
 
 from .TorusBraidVisual import draw_torus_braid
 
@@ -97,7 +99,10 @@ def generate_all_states(p, q):
             fig.add_artist(line)
             
     # Save and display
-    plt.savefig("../out/all_braid_resolutions_separated.png", dpi=300, bbox_inches="tight")
+    SCRIPT_DIR = Path(__file__).parent.parent.parent  # Go up to project root
+    OUT_DIR = SCRIPT_DIR / "out"
+    OUT_DIR.mkdir(exist_ok=True)
+    plt.savefig(OUT_DIR / "all_braid_resolutions_separated.png", dpi=300, bbox_inches="tight")
     print(f"Generated 'all_braid_resolutions_separated.png' with {len(states)} individual states.")
     plt.show()
 
