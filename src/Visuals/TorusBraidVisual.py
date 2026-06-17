@@ -8,10 +8,11 @@ Click a crossing cell to cycle through three modes:
 """
 
 import matplotlib.pyplot as plt
-import matplotlib.lines as mlines
 import numpy as np
+import tkinter as tk
 
 from ..Computation.TemperleyToState import *
+from .Display import Display, FigureContainer
 
 
 def draw_torus_braid(p: int, q: int, ax=None, title=None, initial_modes=None):
@@ -246,7 +247,7 @@ def output_str_to_crossing_modes(out_str, p, q):
     return modes
 
 
-def visualize_from_input(in_str):
+def visualize_tlword(in_str):
     q = 3
     p = len(in_str)          # p == k
     out_str = transform(in_str)
@@ -261,11 +262,14 @@ def visualize_from_input(in_str):
     draw_torus_braid(p, q, ax=ax, initial_modes=modes)
     ax.set_title(f"TL-Word: {in_str}  →  Kauffman: {out_str}", fontsize=10, family="monospace", pad=6)
     plt.tight_layout()
-    plt.show()
+    return fig
 
 
 if __name__ == "__main__":
+    word = "011011"
 
-    visualize_from_input("011011")
+    fig = visualize_tlword(word)
+    window = Display(title=f"Torus Braid Visual: {word}")
 
-    
+    window.content = FigureContainer(fig)
+    window.display()
