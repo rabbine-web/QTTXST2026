@@ -268,8 +268,7 @@ def visualize_tlword(in_str):
 if __name__ == "__main__":
     word = "011011"
 
-    fig = visualize_tlword(word)
-    window = Display(title=f"Torus Braid Visual: {word}")
-
-    window.content = FigureContainer(fig)
-    window.display()
+    Display(
+        title=f"Torus Braid Visual: {word}",
+        content=FigureContainer(visualize_tlword(word))
+    ).display()

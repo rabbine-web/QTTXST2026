@@ -6,7 +6,7 @@ import tkinter as tk
 from itertools import product
 
 from .TorusBraidVisual import draw_torus_braid
-from .Display import SingleContainer, Display
+from .Display import FigureContainer, Display
 
 
 def generate_all_states(p, q):
@@ -42,8 +42,11 @@ def generate_all_states(p, q):
     fig = plt.figure(figsize=(n_layers * cell_w, max_height * cell_h), facecolor="#f7f7f5")
     
     # Set up coordinate grid logic (0.0 to 1.0)
-    margin_x = 0.05
-    margin_y = 0.05
+    # Use zero outer margins so the figure fills the full canvas
+    margin_x = 0.0
+    margin_y = 0.0
+    # Remove any figure padding so add_axes coordinates map to full figure
+    fig.subplots_adjust(left=0, right=1, top=1, bottom=0)
     usable_w = 1.0 - 2 * margin_x
     usable_h = 1.0 - 2 * margin_y
     
@@ -103,26 +106,16 @@ def generate_all_states(p, q):
     return fig
 
 
-class ResolutionCube(SingleContainer):
+class ResolutionCube(FigureContainer):
     """Display a resolution cube (all states of a braid) in a tkinter frame."""
 
     def __init__(self, p: int, q: int):
-        super().__init__()
+        self.fig = generate_all_states(p, q)
 
-        self.p = p
-        self.q = q
-
-    def draw(self, frame: tk.Frame) -> None:
-        """Generate and display the resolution cube in the provided frame."""
-        fig = generate_all_states(self.p, self.q)
-        
-        # Embed the matplotlib figure in the tkinter frame
-        canvas = FigureCanvasTkAgg(fig, master=frame)
-        canvas.draw()
-        canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
+        super().__init__(self.fig)
 
 if __name__ == "__main__":
-    window = Display(title="Braid Resolution")
-    cube = ResolutionCube(p=2, q=4)
-    window.content = cube
-    window.display()
+    Display(
+        title="Braid Resolution",
+        content=ResolutionCube(p=2, q=3)
+    ).display()
