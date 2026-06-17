@@ -1,138 +1,127 @@
 import tkinter as tk
+from abc import ABC, abstractmethod
+from typing import Optional
 
 
-class Displayable:
+class Container(ABC):
+    """Abstract base for all drawable containers.
 
-    def __init__(self, shortname="unknown"):
+    Containers receive a frame and render themselves into it.
+    They know nothing about their parents.
+    """
 
-        self.shortname = shortname
-        self.parent = None
+    @abstractmethod
+    def draw(self, frame: tk.Frame) -> None:
+        """Render this container into the provided frame.
 
-    def draw(self):
+        Subclasses must implement this.
+        """
+        pass
 
-        if self.parent is None:
+
+class SingleContainer(Container):
+    """A container that holds and renders a single child container."""
+
+    def __init__(self):
+        self.content: Optional[Container] = None
+
+    def draw(self, frame: tk.Frame) -> None:
+        """Render the child if present into the provided frame."""
+        if self.content is None:
             return
-
-    def create(self, frame):
-
-        self.parent = frame
+        self.content.draw(frame)
 
 
-class DisplayContent:
+class VerticalSplit(Container):
+    """Create vertical split. `self.left` and `self.right` are containers."""
 
-    def __init__(self, title="TITLE"):
-        self.title = title
+    def __init__(self, ratio: float = 0.5):
 
-    def displayables(self) -> list[Displayable]:
-        return []
+        self.ratio = max(0.0, min(1.0, ratio))
+        self.left = SingleContainer()
+        self.right = SingleContainer()
 
-    def options(self):
-        return
+    def draw(self, frame: tk.Frame) -> None:
+        """Place left and right containers into subframes and render them."""
+        width = frame.winfo_width()
+        if width <= 1:
+            width = 400  # fallback if not yet sized
+        
+        left_width = int(width * self.ratio)
+        
+        left_frame = tk.Frame(frame)
+        left_frame.place(x=0, y=0, width=left_width, relheight=1.0)
+        
+        right_frame = tk.Frame(frame)
+        right_frame.place(x=left_width, y=0, width=width - left_width, relheight=1.0)
+        
+        self.left.draw(left_frame)
+        self.right.draw(right_frame)
 
-    def update(self):
-        for obj in self.displayables():
-            obj.draw()
+
+class HorizontalSplit(Container):
+    """Create horizontal split. `self.top` and `self.bottom` are containers."""
+
+    def __init__(self, ratio: float = 0.5):
+        self.ratio = max(0.0, min(1.0, ratio))
+        self.top = SingleContainer()
+        self.bottom = SingleContainer()
+
+    def draw(self, frame: tk.Frame) -> None:
+        """Place top and bottom containers into subframes and render them."""
+        height = frame.winfo_height()
+        if height <= 1:
+            height = 400  # fallback if not yet sized
+        
+        top_height = int(height * self.ratio)
+        
+        top_frame = tk.Frame(frame)
+        top_frame.place(x=0, y=0, relwidth=1.0, height=top_height)
+        
+        bottom_frame = tk.Frame(frame)
+        bottom_frame.place(x=0, y=top_height, relwidth=1.0, height=height - top_height)
+        
+        self.top.draw(top_frame)
+        self.bottom.draw(bottom_frame)
 
 
 class Display:
+    """
+    Usage example:
 
-    def __init__(self, content: DisplayContent):
+        window = Display(title="My App")
 
-        self.content = content
+        split = VerticalSplit(ratio=0.6)
+        graph1 = SomeCustomContainer()
 
-        # Initialize window and set fullscreen
+        split.left = graph1
+        window.content = split
+
+        window.display()
+    """
+
+    def __init__(self, title: str = "TITLE"):
+
         self.root = tk.Tk()
-        self.root.title(content.title)
+        self.root.title(title)
         self.root.protocol("WM_DELETE_WINDOW", self.root.destroy)
 
-        self.root.withdraw()
+        # Root content frame
+        self.content_frame = tk.Frame(self.root)
+        self.content_frame.pack(side=tk.BOTTOM, fill=tk.BOTH, expand=True)
 
-        self.create_options_frame()
-        self.create_display_grid()
+        # Root container
+        self.content = SingleContainer()
 
-    def create_display_grid(self):
+    def display(self) -> None:
+        """Draw content and show the window."""
+        # Draw the content into the frame
+        self.content.draw(self.content_frame)
 
-        # graphics frame
-        graphics_frame = tk.Frame(self.root)
-        graphics_frame.pack(side=tk.BOTTOM, fill=tk.BOTH, expand=True)
+        # Window starts maximized
+        try:
+            self.root.state('zoomed')
+        except Exception:
+            pass
 
-        display_figures = self.content.displayables()
-        if len(display_figures) == 0:
-            return
-
-        # create first display box (left box if there are multiple)
-        main_width = 1
-        if len(display_figures) > 1:
-            main_width = 0.5
-
-        main_graphics_box = tk.Frame(graphics_frame)
-        main_graphics_box.place(
-            relx=0, rely=0,
-            relwidth=main_width, relheight=1)
-        display_figures[0].create(main_graphics_box)
-
-        if len(display_figures) > 1:
-
-            minor_graphics_box = tk.Frame(graphics_frame)
-            minor_graphics_box.place(
-                relx=0.5, rely=0,
-                relwidth=0.5, relheight=1)
-            display_figures[1].create(minor_graphics_box)
-
-        # # matplotlib figure in left box
-        # self.fig = plt.figure()
-        # self.ax = self.fig.add_subplot(1, 1, 1, projection='3d')
-        # self.canvas = FigureCanvasTkAgg(self.fig, master=left_graphics_box)
-        # self.canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
-        #
-        # # matplotlib figure in right box
-        # fig2 = plt.figure()
-        # ax2 = fig2.add_subplot(1, 1, 1)
-        # canvas2 = FigureCanvasTkAgg(fig2, master=right_graphics_box)
-        # canvas2.get_tk_widget().pack(fill=tk.BOTH, expand=True)
-
-    def create_options_frame(self):
-        # options frame
-        options_frame = tk.Frame(self.root, height=30)
-        options_frame.pack(side=tk.TOP, fill=tk.X)
-        options_frame.pack_propagate(False)
-
-        # Options
-        #
-        # n-config
-        self.n_spinbox = tk.Spinbox(
-            options_frame,
-            from_=10, to=50,
-            command=self._on_n_changed)
-        self.n_spinbox.bind("<Return>", lambda e: self._on_n_changed())
-        self.n_spinbox.pack(side=tk.LEFT)
-        #
-        # toggles
-        complement_var = tk.BooleanVar()
-        tk.Checkbutton(
-            options_frame,
-            text="Complement",
-            variable=complement_var).pack(side=tk.LEFT)
-        #
-        labels_var = tk.BooleanVar()
-        tk.Checkbutton(
-            options_frame,
-            text="Prime Labels",
-            variable=labels_var).pack(side=tk.LEFT)
-        #
-        tk.Button(options_frame, text="Cycle Layout").pack(side=tk.LEFT)
-
-    def _on_n_changed(self):
-        new_n = int(self.n_spinbox.get())
-
-        self.obj.change_n(new_n)
-
-        self.obj.draw(self.ax)
-        self.canvas.draw_idle()
-
-    def show(self):
-        self.content.update()
-
-        self.root.deiconify()
-        self.root.state('zoomed')
         self.root.mainloop()
