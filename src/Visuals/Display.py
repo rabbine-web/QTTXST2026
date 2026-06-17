@@ -43,17 +43,11 @@ class VerticalSplit(Container):
 
     def draw(self, frame: tk.Frame) -> None:
         """Place left and right containers into subframes and render them."""
-        width = frame.winfo_width()
-        if width <= 1:
-            width = 400  # fallback if not yet sized
-        
-        left_width = int(width * self.ratio)
-        
         left_frame = tk.Frame(frame)
-        left_frame.place(x=0, y=0, width=left_width, relheight=1.0)
+        left_frame.place(relx=0, rely=0, relwidth=self.ratio, relheight=1.0)
         
         right_frame = tk.Frame(frame)
-        right_frame.place(x=left_width, y=0, width=width - left_width, relheight=1.0)
+        right_frame.place(relx=self.ratio, rely=0, relwidth=1.0 - self.ratio, relheight=1.0)
         
         self.left.draw(left_frame)
         self.right.draw(right_frame)
@@ -69,17 +63,11 @@ class HorizontalSplit(Container):
 
     def draw(self, frame: tk.Frame) -> None:
         """Place top and bottom containers into subframes and render them."""
-        height = frame.winfo_height()
-        if height <= 1:
-            height = 400  # fallback if not yet sized
-        
-        top_height = int(height * self.ratio)
-        
         top_frame = tk.Frame(frame)
-        top_frame.place(x=0, y=0, relwidth=1.0, height=top_height)
+        top_frame.place(relx=0, rely=0, relwidth=1.0, relheight=self.ratio)
         
         bottom_frame = tk.Frame(frame)
-        bottom_frame.place(x=0, y=top_height, relwidth=1.0, height=height - top_height)
+        bottom_frame.place(relx=0, rely=self.ratio, relwidth=1.0, relheight=1.0 - self.ratio)
         
         self.top.draw(top_frame)
         self.bottom.draw(bottom_frame)
@@ -104,7 +92,7 @@ class Display:
 
         self.root = tk.Tk()
         self.root.title(title)
-        self.root.protocol("WM_DELETE_WINDOW", self.root.destroy)
+        self.root.protocol("WM_DELETE_WINDOW", self._on_close)
 
         # Root content frame
         self.content_frame = tk.Frame(self.root)
@@ -112,6 +100,11 @@ class Display:
 
         # Root container
         self.content = SingleContainer()
+
+    def _on_close(self) -> None:
+        """Handle window close event."""
+        self.root.destroy()
+        self.root.quit()
 
     def display(self) -> None:
         """Draw content and show the window."""
