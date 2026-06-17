@@ -1,29 +1,97 @@
-from collections import deque
-"""
-n is the number of strands
-k is the number of repitions
-    integers will be represent states through binary, 
-"""
-def generate_maps(n, k):
-    # create a list of valid states for every hom degree
-    states_of_hom_deg = [[] for _ in range((n - 1) * k)]
-    maps_of_hom_deg = [[] for _ in range((n - 1) * k)]
-    hom_deg = 0
+import bisect
 
-    repition_mask = (1 << (n - 1)) - 1
+"""
+Args:
+    n is the number of strands
+    k is the number of repitions
+        integers will be represent states through binary, 
+"""
+def generate_maps(n):
+    # create a list of valid states for every hom degree
+    states_of_hom_deg = [[0]]
+    maps_of_hom_deg = {}
+
+    repition_size = n - 1
+
+    one_repition_mask = (1 << (repition_size)) - 1
+    two_repition_mask = (1 << (2*(repition_size))) - 1
 
     # continue to generate while still elements left in last layer
-    while states_of_hom_deg[hom_deg]:
+    while states_of_hom_deg[-1]:
+        valid_states = states_of_hom_deg[-1]
+        states_of_hom_deg.append([])
         # try every valid state
-        for prev_state in states_of_hom_deg[hom_deg]:
-            # try adding 1 temperlieb element into the last repition
-            for i in range(n - 1):
-                index = (n - 2 - i)
-                # we can try adding that element to every non zero repition
+        for prev_state in valid_states:
+            # try adding 1 temperlieb element, [e1,e2...en-1], into the last repition
 
-        hom_deg += 1
+            for added_elm in range(repition_size):
+                new_states = []
+
+                # we can try adding that element to every non zero repition
+                insert_at_rep = 0
+                index = (repition_size - added_elm) - 1 # starting from the end of the binary
+                
+                cur_repition = (prev_state >> (repition_size * insert_at_rep)) & one_repition_mask
+                while(cur_repition != 0):
+                    if((cur_repition >> index) & 0b1 == 0):
+                        new_states.append(prev_state | 1 << (index + (insert_at_rep * repition_size)))
+                    insert_at_rep += 1
+                    cur_repition = (prev_state >> (repition_size * insert_at_rep)) & one_repition_mask
+                
+                if(insert_at_rep == 0 or added_elm == repition_size - 1):
+                    if((cur_repition >> index) & 0b1 == 0):
+                        new_states.append(prev_state | 1 << (index + (insert_at_rep * repition_size)))
+
+
+                for temp_state in new_states:
+                    if(insert_at_rep > 0): # no need to check is in last rep since not possible
+                        two_rep = (temp_state >> ((insert_at_rep - 1) * (repition_size))) & two_repition_mask
+                        if(not is_valid(two_reps=two_rep, n=n, added_elm=added_elm)):
+                            continue
+
+                    
+                    existing_maps = maps_of_hom_deg.get((prev_state, temp_state), [])
+                    if(not exists_in_map(existing_maps, (prev_state, temp_state), added_elm) and not temp_state in states_of_hom_deg[-1]):
+                        existing_maps.append(added_elm)
+                        maps_of_hom_deg[(prev_state, temp_state)] = existing_maps
+                        states_of_hom_deg[-1].append(temp_state)
+                
+                #TODO: then try the indirect mappings of 
+            
+            # TODO: observe how much element n-1 has lee way?
+
+
+
+        if(len(states_of_hom_deg) >= 5):
+            break
+
+    #print(states_of_hom_deg)
+    for hom_deg in states_of_hom_deg:
+        for state in hom_deg:
+            print(bin(state))
+        print()
+
+    print(maps_of_hom_deg)
+
+
+def is_valid(two_reps, n, added_elm):
+    # since in most cases we only add if no 1 in this position before
+    #second_pair = two_reps & (0b11 << ())
+    return True
+
+
+def exists_in_map(existing_maps, key, new_elm):
+    
+    # Binary search to find insertion point
+    idx = bisect.bisect_left(existing_maps, new_elm)
+    
+    # Verify index boundaries and match
+    return idx < len(existing_maps) and existing_maps[idx] == new_elm
+
+    
+
 
 
 if __name__ == "__main__":
     n = 3
-    k = 2
+    generate_maps(n)
