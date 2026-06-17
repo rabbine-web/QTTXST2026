@@ -1,4 +1,5 @@
 import tkinter as tk
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from abc import ABC, abstractmethod
 from typing import Optional
 
@@ -73,6 +74,16 @@ class HorizontalSplit(Container):
         self.bottom.draw(bottom_frame)
 
 
+class FigureContainer(Container):
+    def __init__(self, fig):
+        self.fig = fig
+
+    def draw(self, frame: tk.Frame) -> None:
+        canvas = FigureCanvasTkAgg(self.fig, master=frame)
+        canvas.draw()
+        canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
+
+
 class Display:
     """
     Usage example:
@@ -88,7 +99,8 @@ class Display:
         window.display()
     """
 
-    def __init__(self, title: str = "TITLE"):
+    def __init__(self, title: str = "TITLE", 
+                 content: Container = SingleContainer()):
 
         self.root = tk.Tk()
         self.root.title(title)
@@ -99,7 +111,7 @@ class Display:
         self.content_frame.pack(side=tk.BOTTOM, fill=tk.BOTH, expand=True)
 
         # Root container
-        self.content = SingleContainer()
+        self.content = content
 
     def _on_close(self) -> None:
         """Handle window close event."""

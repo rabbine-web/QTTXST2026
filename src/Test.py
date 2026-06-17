@@ -1,20 +1,17 @@
-from .Visuals.Display import Display, VerticalSplit, HorizontalSplit
+from .Visuals.TorusBraidVisual import visualize_tlword
+from .Visuals.Display import Display, VerticalSplit, HorizontalSplit, FigureContainer
 from .Visuals.BraidResolution import ResolutionCube
 
 if __name__ == "__main__":
 
-    window = Display(title="Braid Resolution")
-    vert_split = VerticalSplit(0.8)
-    horz_split = HorizontalSplit(0.5)
+    window = Display(
+        title="Braid Resolution",
+        content=VerticalSplit(0.5)
+    )
+    window.content.right = HorizontalSplit(0.5)
 
-    cube1 = ResolutionCube(p=2, q=3)
-    cube2 = ResolutionCube(p=2, q=2)
-
-    horz_split.bottom = cube2
-
-    vert_split.left = cube1
-    vert_split.right = horz_split
-    
-    window.content = vert_split
+    window.content.left = ResolutionCube(p=2, q=3)
+    window.content.right.top = FigureContainer(visualize_tlword("011011"))
+    window.content.right.bottom = ResolutionCube(p=1, q=3)
 
     window.display()

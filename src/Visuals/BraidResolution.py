@@ -4,7 +4,6 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import tkinter as tk
 
 from itertools import product
-from pathlib import Path
 
 from .TorusBraidVisual import draw_torus_braid
 from .Display import SingleContainer, Display
