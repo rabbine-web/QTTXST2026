@@ -9,6 +9,6 @@ FOR WINDOWS: .\venv\Scripts\Activate
 FOR MAC USE: ./venv/bin/activate
 pip install -r requirements.txt
 
-Now, you may run any given file Package/Test.py as such:
+Example for how to run a script, Visuals/Test.py:
 
-python -m src.Package.Test
+python -m src.Visuals.Test

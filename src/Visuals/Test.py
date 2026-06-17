@@ -1,6 +1,6 @@
-from .Visuals.TorusBraidVisual import visualize_tlword
-from .Visuals.Display import Display, VerticalSplit, HorizontalSplit, FigureContainer
-from .Visuals.BraidResolution import ResolutionCube
+from .TorusBraidVisual import visualize_tlword
+from .Display import Display, VerticalSplit, HorizontalSplit, FigureContainer
+from .BraidResolution import ResolutionCube
 
 if __name__ == "__main__":
 
