@@ -1,10 +1,13 @@
 import matplotlib.pyplot as plt
 import matplotlib.lines as mlines
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+import tkinter as tk
 
 from itertools import product
 from pathlib import Path
 
 from .TorusBraidVisual import draw_torus_braid
+from .Display import SingleContainer, Display
 
 
 def generate_all_states(p, q):
@@ -98,13 +101,29 @@ def generate_all_states(p, q):
             )
             fig.add_artist(line)
             
-    # Save and display
-    SCRIPT_DIR = Path(__file__).parent.parent.parent  # Go up to project root
-    OUT_DIR = SCRIPT_DIR / "out"
-    OUT_DIR.mkdir(exist_ok=True)
-    plt.savefig(OUT_DIR / "all_braid_resolutions_separated.png", dpi=300, bbox_inches="tight")
-    print(f"Generated 'all_braid_resolutions_separated.png' with {len(states)} individual states.")
-    plt.show()
+    return fig
+
+
+class ResolutionCube(SingleContainer):
+    """Display a resolution cube (all states of a braid) in a tkinter frame."""
+
+    def __init__(self, p: int, q: int):
+        super().__init__()
+
+        self.p = p
+        self.q = q
+
+    def draw(self, frame: tk.Frame) -> None:
+        """Generate and display the resolution cube in the provided frame."""
+        fig = generate_all_states(self.p, self.q)
+        
+        # Embed the matplotlib figure in the tkinter frame
+        canvas = FigureCanvasTkAgg(fig, master=frame)
+        canvas.draw()
+        canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
 
 if __name__ == "__main__":
-    generate_all_states(2, 3)
+    window = Display(title="Braid Resolution")
+    cube = ResolutionCube(p=2, q=4)
+    window.content = cube
+    window.display()
