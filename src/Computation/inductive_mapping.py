@@ -6,15 +6,15 @@ Args:
     k is the number of repitions
         integers will be represent states through binary, 
 """
-def generate_maps(n):
+def generate_maps(n, k):
     # create a list of valid states for every hom degree
     states_of_hom_deg = [[0]]
     maps_of_hom_deg = {}
 
     repition_size = n - 1
+    max_val = 1 << (k * repition_size)
 
     one_repition_mask = (1 << (repition_size)) - 1
-    two_repition_mask = (1 << (2*(repition_size))) - 1
 
     # continue to generate while still elements left in last layer
     while states_of_hom_deg[-1]:
@@ -44,10 +44,12 @@ def generate_maps(n):
 
 
                 for temp_state in new_states:
-                    if(insert_at_rep > 0): # no need to check is in last rep since not possible
-                        two_rep = (temp_state >> ((insert_at_rep - 1) * (repition_size))) & two_repition_mask
-                        if(not is_valid(two_reps=two_rep, n=n, added_elm=added_elm)):
-                            continue
+                    if(max_val < temp_state):
+                        continue
+                    
+                    if(not is_valid(value= temp_state, n=n)):
+                        print("not valid " + bin(temp_state))
+                        continue
 
                     
                     existing_maps = maps_of_hom_deg.get((prev_state, temp_state), [])
@@ -71,12 +73,31 @@ def generate_maps(n):
             print(bin(state))
         print()
 
-    print(maps_of_hom_deg)
+
+    for key, value in maps_of_hom_deg.items():
+        print(f"From {bin(key[0])} takes element {[v + 1 for v in value]} to {bin(key[1])}")
+    
 
 
-def is_valid(two_reps, n, added_elm):
+def is_valid(value, n):
+    print("chceking valid  " + bin(value))
     # since in most cases we only add if no 1 in this position before
-    #second_pair = two_reps & (0b11 << ())
+    mask = 0b11 << (n - 2) | 0b11
+
+    one_source = 0b1 << (n - 1) | 0b0
+    one_target = 0b1 << (n - 1) | 0b1
+    two_source = 0b1 << (n - 1) | 0b1
+    two_target = 0b1 << (n - 1) | 0b11
+
+
+    while(value > 0):
+        two_reps = value & mask
+        print(bin(two_reps))
+        
+        if(two_reps == one_source or two_reps == two_target):
+            return False
+        value = value >> 1
+
     return True
 
 
@@ -94,4 +115,5 @@ def exists_in_map(existing_maps, key, new_elm):
 
 if __name__ == "__main__":
     n = 3
-    generate_maps(n)
+    k = 2
+    generate_maps(n, k)
