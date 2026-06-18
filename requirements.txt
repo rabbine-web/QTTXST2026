@@ -1,3 +1,5 @@
 matplotlib
 numpy
 sympy
+igraph
+pyvista
