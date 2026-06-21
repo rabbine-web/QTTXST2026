@@ -1,4 +1,4 @@
-def transform(in_str):
+def transform(in_str, p=None):
     out = []  # list of chars, index 0 = leftmost
 
     for i in range(len(in_str) - 1, -1, -1):  # right to left
@@ -12,9 +12,11 @@ def transform(in_str):
             else:
                 out = ['1', '0'] + out
 
-    # Pad with leading zeros to ensure length 2k
     result = ''.join(out)
-    result = result.zfill(2 * len(in_str))
+    if p is None:
+        result = result.zfill(2 * len(in_str))
+    else:
+        result = result.zfill(2 * p)
 
     return result
 

@@ -15,7 +15,7 @@ from ..Computation.TemperleyToState import *
 from .Display import Display, FigureContainer
 
 
-def draw_torus_braid(p: int, q: int, ax=None, title=None, initial_modes=None):
+def draw_torus_braid(p: int, q: int, ax, title=None, initial_modes=None):
     """
     initial_modes: dict mapping (col, row) -> mode (0,1,2) for crossing cells.
                    Crossings not in the dict default to mode 0.
@@ -24,12 +24,11 @@ def draw_torus_braid(p: int, q: int, ax=None, title=None, initial_modes=None):
         raise ValueError("q must be >= 2.")
     if p < 1:
         raise ValueError("p must be >= 1.")
+    if ax is None:
+        raise ValueError("ax must be provided.")
 
     rows = q - 1
     cols = p * (q - 1)
-
-    if ax is None:
-        ax = plt.gca()
 
     lw    = 2.5
     gap   = 0.18
@@ -167,31 +166,32 @@ def state_to_crossing_modes(state, p, q):
         modes[(col, row)] = 2 if bit else 1
     return modes
 
-def display_state_set(state_set, p, q, title="Kauffman States"):
+def state_set_display(state_set, p, q, title="Kauffman States"):
     """
-    Display all states in state_set as torus braid diagrams in a single window.
+    Create a figure displaying all states in `state_set` as torus braid diagrams.
+    Returns the matplotlib `fig` (does not show it).
     Each diagram is labelled with its reversed binary string.
     """
     states = sorted(state_set)
     num_states = len(states)
     if num_states == 0:
         print("Empty set — nothing to display.")
-        return
- 
+        return None
+
     # Lay out in a grid, roughly square
     ncols = int(np.ceil(np.sqrt(num_states)))
     nrows = int(np.ceil(num_states / ncols))
- 
+
     cell_w = p * (q - 1)
     cell_h = (q - 1)
-    fig_w  = ncols * cell_w * 0.8
-    fig_h  = nrows * cell_h * 0.5 + nrows * 0.4   # extra for labels
- 
+    fig_w = ncols * cell_w * 0.8
+    fig_h = nrows * cell_h * 0.5 + nrows * 0.4  # extra for labels
+
     fig, axes = plt.subplots(nrows, ncols,
                              figsize=(max(fig_w, 4), max(fig_h, 3)),
                              facecolor="#f7f7f5")
     fig.suptitle(title, fontsize=13, y=1.01)
- 
+
     # Flatten axes array for easy indexing
     if nrows == 1 and ncols == 1:
         axes = np.array([[axes]])
@@ -199,9 +199,9 @@ def display_state_set(state_set, p, q, title="Kauffman States"):
         axes = axes[np.newaxis, :]
     elif ncols == 1:
         axes = axes[:, np.newaxis]
- 
+
     total_bits = p * (q - 1)
- 
+
     for idx, state in enumerate(states):
         r, c = divmod(idx, ncols)
         ax = axes[r][c]
@@ -210,14 +210,14 @@ def display_state_set(state_set, p, q, title="Kauffman States"):
         draw_torus_braid(p, q, ax=ax, initial_modes=modes)
         label = format(state, f'0{total_bits}b')[::-1]
         ax.set_title(label, fontsize=9, pad=3, family="monospace")
- 
+
     # Hide any unused axes
     for idx in range(num_states, nrows * ncols):
         r, c = divmod(idx, ncols)
         axes[r][c].axis("off")
- 
+
     plt.tight_layout()
-    plt.show()
+    return fig
 
 
 def output_str_to_crossing_modes(out_str, p, q):
@@ -247,10 +247,11 @@ def output_str_to_crossing_modes(out_str, p, q):
     return modes
 
 
-def visualize_tlword(in_str):
+def visualize_tlword(in_str, p=None):
     q = 3
-    p = len(in_str)          # p == k
-    out_str = transform(in_str)
+    if p is None:
+        p = len(in_str)          # p == k
+    out_str = transform(in_str, p=p)
 
     print(f"Input  ({len(in_str):2d} bits): {in_str}")
     print(f"Output ({len(out_str):2d} bits): {out_str}")
@@ -265,10 +266,28 @@ def visualize_tlword(in_str):
     return fig
 
 
+def visualize_kauffman_state(state_str, p, q):
+    """
+    Visualize a Kauffman state string directly using `draw_torus_braid`.
+    `state_str` is a binary string where each character '0' or '1' maps to
+    a crossing mode via `output_str_to_crossing_modes`.
+    Returns the matplotlib `fig` (does not show it).
+    """
+
+    modes = output_str_to_crossing_modes(state_str, p, q)
+
+    fig, ax = plt.subplots(figsize=(p * (q-1), (q-1) * 0.9), facecolor="#f7f7f5")
+    ax.set_facecolor("#f7f7f5")
+    draw_torus_braid(p, q, ax=ax, initial_modes=modes)
+    ax.set_title(f"Kauffman: {state_str}", fontsize=10, family="monospace", pad=6)
+    plt.tight_layout()
+    return fig
+
+
 if __name__ == "__main__":
     word = "011011"
 
     Display(
         title=f"Torus Braid Visual: {word}",
-        content=FigureContainer(visualize_tlword(word))
+        content=FigureContainer(visualize_kauffman_state(word, p=3, q=3))
     ).display()
