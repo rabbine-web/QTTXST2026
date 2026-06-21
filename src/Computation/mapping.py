@@ -1,4 +1,4 @@
-def generate_Kauffman_States(n,k):
+def generate_Kauffman_States(n,k) -> list:
     kauffmanStates = []
     for x in range((pow(2,(n-1)*k))):
         kauffmanStates.append(bin(x)[2:].zfill((n-1) * k ))
@@ -87,14 +87,14 @@ def findIndexes(state):
             indexes.append(i)
     return indexes
 
-def generateHomdegrees(states,homDegrees,indexes,temperlyLeibWords):
+def generateHomdegrees(states,homDegrees,indexes,temperlyLiebWords):
     for state in states:
         count = state.count('1')
         index = findIndexes(state)
         word =  generateTemperlyLeib(state)
         homDegrees[count].append(state)
         indexes[count].append(index)
-        temperlyLeibWords[count].append(word)
+        temperlyLiebWords[count].append(word)
 
 def generateTemperlyLeib(state):
     word = []
@@ -103,10 +103,10 @@ def generateTemperlyLeib(state):
             word.append("e" + str(i%2 + 1))
     return word
 
-def printStates(homDegrees,indexes,temperlyLeibWords):
+def printStates(homDegrees,indexes,temperlyLiebWords):
     for i in range(len(homDegrees)):
         for j in range(len(homDegrees[i])):
-            print(homDegrees[i][j], indexes[i][j], temperlyLeibWords[i][j])
+            print(homDegrees[i][j], indexes[i][j], temperlyLiebWords[i][j])
 
 def describeMap(source,target):
     i = 0
@@ -117,17 +117,17 @@ def describeMap(source,target):
             return (target[i],i)
     return (target[-1],len(target)-1)
         
-def findDirectMaps(homDegrees,indexes,temperlyLeibWords):
+def findDirectMaps(homDegrees,indexes,temperlyLiebWords):
     maps = {}
     for i in range(len(homDegrees) - 1):
             
             for k in range(len(homDegrees[i])):
 
-                state1 = (homDegrees[i][k], indexes[i][k], temperlyLeibWords[i][k])
+                state1 = (homDegrees[i][k], indexes[i][k], temperlyLiebWords[i][k])
 
                 for l in range(len(homDegrees[i + 1])):
 
-                    state2 = (homDegrees[i + 1][l], indexes[i + 1][l],temperlyLeibWords[i+1][l])
+                    state2 = (homDegrees[i + 1][l], indexes[i + 1][l],temperlyLiebWords[i+1][l])
 
                     if set(state1[1]).issubset(state2[1]):
                         generator,position = describeMap(state1[2],state2[2])
@@ -193,15 +193,19 @@ k = int(input("Enter the number of Repitions "))
 temp = input("Do you wish to proceed ")
 states = generate_Kauffman_States(n,k)
 
+print(type(states))
+
 homDegrees = [[] for i in range((k*n-1))]
 indexes = [[] for i in range((k*n-1))]
-temperlyLeibWords = [[] for i in range((k*n-1))]
+temperlyLiebWords = [[] for i in range((k*n-1))]
 
-generateHomdegrees(states,homDegrees,indexes,temperlyLeibWords)
-maps = findDirectMaps(homDegrees,indexes,temperlyLeibWords)
+generateHomdegrees(states,homDegrees,indexes,temperlyLiebWords)
+maps = findDirectMaps(homDegrees,indexes,temperlyLiebWords)
+print(type(maps))
+print(f"HERE{maps[maps.keys().__iter__().__next__()]}")
 isomorphisms = findIsomorphisms(maps,n,k)
 
-printMaps(homDegrees,indexes,temperlyLeibWords)
+printMaps(homDegrees,indexes,temperlyLiebWords)
 
 for source in isomorphisms:
     for target in isomorphisms[source]:
