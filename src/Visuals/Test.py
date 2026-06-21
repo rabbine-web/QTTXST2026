@@ -1,8 +1,16 @@
 from .TorusBraidVisual import visualize_kauffman_state, visualize_tlword
 from .Display import Display, VerticalSplit, HorizontalSplit, FigureContainer
+from .GraphDisplay import GraphContainer
 from .BraidResolution import ResolutionCube
+from ..Computation.mapping import maps_graph
 
 if __name__ == "__main__":
+
+    graph = maps_graph(3, 2)
+    display = GraphContainer(
+        graph,
+        on_click = print
+    )
 
     """
     Example of multiple functionalities and composition of GUI components
