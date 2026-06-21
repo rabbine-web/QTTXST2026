@@ -1,3 +1,48 @@
+import igraph as ig
+
+def build_graph(maps) -> ig.Graph:
+
+    G = ig.Graph(directed=True)
+
+    vertices = set()
+
+    for source in maps:
+        vertices.add(source)
+
+        for target, generator, position in maps[source]:
+            vertices.add(target)
+
+    vertices = list(vertices)
+
+    G.add_vertices(len(vertices))
+    G.vs["label"] = vertices
+
+    index = {
+        label: i
+        for i, label in enumerate(vertices)
+    }
+
+    edges = []
+    generators = []
+    positions = []
+
+    for source in maps:
+        for target, generator, position in maps[source]:
+
+            edges.append(
+                (index[source], index[target])
+            )
+
+            generators.append(generator)
+            positions.append(position)
+
+    G.add_edges(edges)
+
+    G.es["generator"] = generators
+    G.es["position"] = positions
+
+    return G
+
 def generate_Kauffman_States(n,k) -> list:
     kauffmanStates = []
     for x in range((pow(2,(n-1)*k))):
@@ -187,26 +232,40 @@ def printMaps(homeDegrees,indexes,temperlyLebiWords):
             word2 = generateTemperlyLeib(target)
             print(source, word1, "maps to target", target, word2, "by inserting", generator, "at position", position)
 
-n = int(input("Enter the number of Strands "))
-k = int(input("Enter the number of Repitions "))
+def maps_graph(n: int, k: int) -> ig.Graph:
 
-temp = input("Do you wish to proceed ")
-states = generate_Kauffman_States(n,k)
+    states = generate_Kauffman_States(n,k)
 
-print(type(states))
+    homDegrees = [[] for i in range((k*n-1))]
+    indexes = [[] for i in range((k*n-1))]
+    temperlyLiebWords = [[] for i in range((k*n-1))]
 
-homDegrees = [[] for i in range((k*n-1))]
-indexes = [[] for i in range((k*n-1))]
-temperlyLiebWords = [[] for i in range((k*n-1))]
+    generateHomdegrees(states,homDegrees,indexes,temperlyLiebWords)
+    maps = findDirectMaps(homDegrees,indexes,temperlyLiebWords)
 
-generateHomdegrees(states,homDegrees,indexes,temperlyLiebWords)
-maps = findDirectMaps(homDegrees,indexes,temperlyLiebWords)
-print(type(maps))
-print(f"HERE{maps[maps.keys().__iter__().__next__()]}")
-isomorphisms = findIsomorphisms(maps,n,k)
+    return build_graph(maps)
 
-printMaps(homDegrees,indexes,temperlyLiebWords)
+if __name__ == "__main__":
+    n = int(input("Enter the number of Strands "))
+    k = int(input("Enter the number of Repitions "))
 
-for source in isomorphisms:
-    for target in isomorphisms[source]:
-        print (source, "is isomorphic to", target)
+    temp = input("Do you wish to proceed ")
+    states = generate_Kauffman_States(n,k)
+
+    print(type(states))
+
+    homDegrees = [[] for i in range((k*n-1))]
+    indexes = [[] for i in range((k*n-1))]
+    temperlyLiebWords = [[] for i in range((k*n-1))]
+
+    generateHomdegrees(states,homDegrees,indexes,temperlyLiebWords)
+    maps = findDirectMaps(homDegrees,indexes,temperlyLiebWords)
+    print(type(maps))
+    print(f"HERE{maps[maps.keys().__iter__().__next__()]}")
+    isomorphisms = findIsomorphisms(maps,n,k)
+
+    printMaps(homDegrees,indexes,temperlyLiebWords)
+
+    for source in isomorphisms:
+        for target in isomorphisms[source]:
+            print (source, "is isomorphic to", target)
