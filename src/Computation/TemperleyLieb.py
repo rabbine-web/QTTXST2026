@@ -34,7 +34,7 @@ def kauffmanstates(n, k):
 """
 Given a kauffman state s (an integer as a binary number) on a braid, and integers n,k
 number of strands and number of twists repspectively, temperleylieb(s, n, k) outputs a
-list of integers corresponding [a,b,c,,,] encoding the Temperley-Lieb word ...e_c e_b e_a.
+list of integers corresponding [a,b,c,...] encoding the Temperley-Lieb word ...e_c e_b e_a.
 """
 def temperleylieb(s, n, k):
     m = n-1
