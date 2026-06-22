@@ -438,27 +438,27 @@ def printData(whittled,directMaps, isomorphisms, indirectMaps):
     printIndirectMaps(indirectMaps)
 
 
+if name = __main__
+    n = int(input("Enter the number of Strands "))
+    k = int(input("Enter the number of Repitions "))
 
-n = int(input("Enter the number of Strands "))
-k = int(input("Enter the number of Repitions "))
+    temp = input("Do you wish to proceed ")
+    tempStates = generate_Kauffman_States(n,k)
 
-temp = input("Do you wish to proceed ")
-tempStates = generate_Kauffman_States(n,k)
+    states = decorateStates(tempStates)
 
-states = decorateStates(tempStates)
+    homDegrees = [[] for i in range((k*n-1))]
+    indexes = [[] for i in range((k*n-1))]
+    temperlyLeibWords = [[] for i in range((k*n-1))]
 
-homDegrees = [[] for i in range((k*n-1))]
-indexes = [[] for i in range((k*n-1))]
-temperlyLeibWords = [[] for i in range((k*n-1))]
+    generateHomdegrees(states,homDegrees,indexes,temperlyLeibWords)
 
-generateHomdegrees(states,homDegrees,indexes,temperlyLeibWords)
+    directMaps = findDirectMaps(homDegrees,indexes,temperlyLeibWords)
+    isomorphisms = findIsomorphisms(directMaps,n,k)
 
-directMaps = findDirectMaps(homDegrees,indexes,temperlyLeibWords)
-isomorphisms = findIsomorphisms(directMaps,n,k)
+    buildIsoPairs(isomorphisms)
+        
+    whittledStates = whittleStates(directMaps,isomorphisms)
+    indirectMaps = findIndirectMaps(directMaps,isomorphisms,whittledStates)
 
-buildIsoPairs(isomorphisms)
-    
-whittledStates = whittleStates(directMaps,isomorphisms)
-indirectMaps = findIndirectMaps(directMaps,isomorphisms,whittledStates)
-
-printData(whittledStates,directMaps,isomorphisms,indirectMaps)
+    printData(whittledStates,directMaps,isomorphisms,indirectMaps)
