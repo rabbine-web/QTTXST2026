@@ -232,7 +232,7 @@ def printMaps(homeDegrees,indexes,temperlyLebiWords):
             word2 = generateTemperlyLeib(target)
             print(source, word1, "maps to target", target, word2, "by inserting", generator, "at position", position)
 
-def maps_graph(n: int, k: int) -> ig.Graph:
+def cube_of_resolution(n: int, k: int) -> ig.Graph:
 
     states = generate_Kauffman_States(n,k)
 

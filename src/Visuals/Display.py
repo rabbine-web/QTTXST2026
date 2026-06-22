@@ -99,12 +99,16 @@ class Display:
         window.display()
     """
 
-    def __init__(self, title: str = "TITLE", 
-                 content: Container = SingleContainer()):
+    def __init__(
+            self, 
+            title: str = "TITLE", 
+            fullscreen: bool = True,
+            content: Container = SingleContainer()):
 
         self.root = tk.Tk()
         self.root.title(title)
         self.root.protocol("WM_DELETE_WINDOW", self._on_close)
+        self.fullscreen = fullscreen
 
         # Root content frame
         self.content_frame = tk.Frame(self.root)
@@ -125,8 +129,18 @@ class Display:
 
         # Window starts maximized
         try:
-            self.root.state('zoomed')
+            if self.fullscreen:
+                self.root.state('zoomed')
+            else:
+                screen_width = self.root.winfo_screenwidth()
+                screen_height = self.root.winfo_screenheight() - 40
+                win_width = (screen_width // 2)
+                self.root.geometry(f"{win_width}x{screen_height}+{screen_width - win_width - 7}+0")
         except Exception:
             pass
 
-        self.root.mainloop()
+        # self.root.mainloop()
+
+    def refresh(self) -> None:
+        """Refresh the display."""
+        self.content.draw(self.content_frame)
