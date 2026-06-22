@@ -53,11 +53,11 @@ def detect_closed_loops(kauf_state, n, k):
                     num_closed_loops += 1
                     forward_strands.pop()
                     forward_strands.append([element_index, element_index + 1])
-                """
+
+                # sometimes canceling will only merge once, no need to pop again
                 elif merged == 1:
                     #print("merged backwards, impossible to loop")
                     forward_strands.pop()
-                """
                     
                 # only merges twice if merging top and bottom
                 if merged == 2:
