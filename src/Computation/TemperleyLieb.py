@@ -62,31 +62,34 @@ def kauffman():
     global states
     states = kauffmanstates(n,k)
 
-##print(timeit.timeit(kauffman, number=1))
-##for s in states:
-##    print(str(bin(s)) + ": ", temperleylieb(s, n, k))
 
-print
+if __name__ == "__main__":
 
+    ##print(timeit.timeit(kauffman, number=1))
+    ##for s in states:
+    ##    print(str(bin(s)) + ": ", temperleylieb(s, n, k))
 
-def naive():
-    return [temperleylieb(state,n,k) for state in states]
-
-def other():
-    return [temperley2(state,n,k) for state in states]
+    print
 
 
+    def naive():
+        return [temperleylieb(state,n,k) for state in states]
 
-"""
-Given the 2^k(n-1)
-"""
-    
-
-##print(naive())
+    def other():
+        return [temperley2(state,n,k) for state in states]
 
 
-print(timeit.timeit(naive, number=1))
-print(timeit.timeit(other, number=1))
+
+    """
+    Given the 2^k(n-1)
+    """
+        
+
+    ##print(naive())
+
+
+    print(timeit.timeit(naive, number=1))
+    print(timeit.timeit(other, number=1))
 
 
 
