@@ -438,7 +438,7 @@ def build_html(n, k, nodes_data, edges_data):
 # Main
 # ---------------------------------------------------------------------------
 def main():
-    """Prompt for n and k, then write the HTML and text-report files."""
+    """Prompt for n and k, then write the HTML"""
     try:
         n = int(input("Enter n: "))
         k = int(input("Enter k: "))
