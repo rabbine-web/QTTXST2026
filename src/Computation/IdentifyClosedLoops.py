@@ -1,12 +1,15 @@
+"""
+kauf_state has been modified to become a binary string, str
+"""
 def detect_closed_loops(kauf_state, n, k):
     forward_strands = []
     num_closed_loops = 0
-    for reptition in reversed(range(k)):
+    for reptition in range(k):
         for element_index in range(n - 1):
             # affects strands, element_index and element_index + 1
-            has_element = kauf_state >> (reptition * (n - 1) + (n - 2 - element_index) ) & 0b1
+            has_element = kauf_state[reptition * (n - 1) + element_index]
 
-            if has_element:
+            if has_element == '1':
                 forward_strands.append([element_index, element_index + 1])
                 #print("initially " + str(forward_strands))
                 # only grows the range
@@ -112,3 +115,12 @@ def check_connection(forward_strands):
         return True
         
     return False
+
+    """
+if __name__ == "__main__":
+
+    kauf_state = "101010010010101"
+    n = 4
+    k = 5
+    print(detect_closed_loops(kauf_state, n , k))
+    """
