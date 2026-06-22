@@ -1,5 +1,5 @@
 # Identifying surviving kauffman states after gaussian elimination for type 1&2 sources and targets.
-from week1 import kauffmanstates
+from src.Computation.TemperleyLieb import kauffmanstates
 
 
 def bit(state, pos):

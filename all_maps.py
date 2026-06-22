@@ -12,8 +12,8 @@ import json
 import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from elimination.week1 import kauffmanstates
-from elimination.gaussian_SourceTarget_indicator import (
+from src.Computation.TemperleyLieb import kauffmanstates
+from Gaussian_elimination import (
     build_generators,
     source_matches,
     has_circle,

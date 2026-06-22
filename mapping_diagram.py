@@ -17,9 +17,9 @@ This file will generate html code needed for diagram mapping, after running mapp
 import os, json, sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from elimination.week1 import kauffmanstates, temperleylieb
-from elimination.gaussian_SourceTarget_indicator import build_generators, source_matches, has_circle, bit
-from mapping.all_maps import (
+from src.Computation.TemperleyLieb import kauffmanstates, temperleylieb
+from Gaussian_elimination import build_generators, source_matches, has_circle, bit
+from all_maps import (
     build_direct_maps, build_iso_pairs, build_indirect_maps,
     popcount, state_to_bin, node_id,
 )
