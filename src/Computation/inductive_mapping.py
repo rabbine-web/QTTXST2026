@@ -68,10 +68,10 @@ def generate_maps(n, k):
                 for temp_state in new_states:
                     #print("checking " + bin(temp_state) + " from " + bin(prev_state) + " by adding element " + str(added_elm))
                     if(not is_valid(value= temp_state, n=n) or temp_state > max_val):
-                        print("not valid " + bin(temp_state))
+                        #print("not valid " + bin(temp_state))
                         continue
 
-                    print("valid " + bin(temp_state))
+                    #print("valid " + bin(temp_state))
                     existing_maps = maps_of_hom_deg.get(temp_state, [])
                     if(not temp_state in states_of_hom_deg[-1]):
                         states_of_hom_deg[-1].append(temp_state)
@@ -79,7 +79,7 @@ def generate_maps(n, k):
                     #if(not exists_in_map(existing_maps, (prev_state, temp_state), added_elm)):
                     if(not (prev_state, added_elm) in existing_maps):
                         existing_maps.append((prev_state, added_elm))
-                        maps_of_hom_deg[(prev_state, temp_state)] = existing_maps
+                        maps_of_hom_deg[temp_state] = existing_maps
                 
             
             # TODO: observe how much element n-1 has lee way?
@@ -87,6 +87,7 @@ def generate_maps(n, k):
 
             type_one_indirect = generate_indirect_type_one(prev_state)
             type_two_indirect = generate_indirect_type_two(prev_state)
+            print(f"From " + bin(prev_state) + " found indirect to " + str([bin(x) for x in type_one_indirect]) + " and " + str([bin(y) for y in type_two_indirect]))
             for potential_state in (type_one_indirect + type_two_indirect):
                 if(not is_valid(potential_state, n=n)):
                     print("not valid " + bin(potential_state))
@@ -98,9 +99,8 @@ def generate_maps(n, k):
                     states_of_hom_deg[-1].append(potential_state)
 
                 if(not -2 in existing_maps):
-                    existing_maps.append(-2)
-                    maps_of_hom_deg[(prev_state, potential_state)] = existing_maps
-
+                    existing_maps.append((prev_state, -2))
+                    maps_of_hom_deg[potential_state] = existing_maps
         
 
     #print(states_of_hom_deg)
@@ -111,8 +111,10 @@ def generate_maps(n, k):
         print()
 
 
+
     for key, value in maps_of_hom_deg.items():
-        print(f"From {bin(key[0])} takes element {[v + 1 for v in value]} to {bin(key[1])}")
+        start = ", ".join("(" + bin(v[0])[2:].zfill(repition_size * k) + ", " + str(v[1]) + ")" for v in value)
+        print(bin(key) + " comes from element " + start)
     
 
 """
@@ -176,16 +178,16 @@ def generate_indirect_type_two(prev_state):
     index = 0
     mask = 0b11 << (n - 2) | 0b11
 
-    type2_potential_one = 0b00 << (n - 2) | 0b01
+    type2_potential_one = 0b01 << (n - 2) | 0b01
     type2_potential_two = 0b11 << (n - 2) | 0b00
     #TODO: check if 10_01 is possible for indirect
     type2_end = 0b10 << (n - 2) | 0b11
-    while(prev_state > (0b1 << index)):
-        masked_state = (prev_state >> index) & mask
-        if(masked_state == type2_potential_one or masked_state == type2_potential_two):
-            # need to set up the site where replacing
-            cleared_state = prev_state | (~(mask << index))
-            indirect_states.append(cleared_state & (type2_end << index))
+    while(prev_state >= (0b1 << index)):
+        cur_val = (prev_state >> index) & mask
+        if(cur_val == type2_potential_one or cur_val == type2_potential_two):
+            # need to set up the site where replacing, sets those 4 digits to 0
+            cleared_state = prev_state & (~(mask << index))
+            indirect_states.append(cleared_state | (type2_end << index))
         index += 1
     return indirect_states
 
