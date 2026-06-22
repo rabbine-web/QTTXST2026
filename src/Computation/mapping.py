@@ -125,6 +125,18 @@ def checkType2Target(state):
                     return True
     return False        
 
+def _fails_isomorphism_check(state: str, n: int, k: int) -> bool:
+    """Return True if the state satisfies any of the four isomorphism check conditions."""
+
+    matrix = generateMatrix(n, k, state)
+
+    return (
+        checkType1Source(matrix)
+        or checkType1Target(matrix)
+        or checkType2Source(matrix)
+        or checkType2Target(matrix)
+    )
+
 def findIndexes(state):
     indexes = []
     for i in range(len(state)):
@@ -244,6 +256,69 @@ def cube_of_resolution(n: int, k: int) -> ig.Graph:
     maps = findDirectMaps(homDegrees,indexes,temperlyLiebWords)
 
     return build_graph(maps)
+
+def whittled_complex(n: int, k: int) -> ig.Graph:
+
+    # states = generate_Kauffman_States(n,k)
+
+    # homDegrees = [[] for i in range((k*n-1))]
+    # indexes = [[] for i in range((k*n-1))]
+    # temperlyLiebWords = [[] for i in range((k*n-1))]
+
+    # generateHomdegrees(states,homDegrees,indexes,temperlyLiebWords)
+    # maps = findDirectMaps(homDegrees,indexes,temperlyLiebWords)
+
+    # cube = cube_of_resolution(n, k)
+
+    # isomorphisms = findIsomorphisms(maps,n,k)
+    # # cube.delete_vertices(isomorphisms)
+    # for iso in isomorphisms:
+    #     print("ISO: ", iso)
+    #     try:
+    #         cube.delete_vertices(cube.vs.select(label_eq=iso))
+    #         print("     SUCCESS: ", iso)
+    #     except:
+    #         print("     FAILED: ", iso)
+    #         continue
+    #     print("     ISO: ", isomorphisms[iso][0])
+    #     try:
+    #         cube.delete_vertices(cube.vs.select(label_eq=isomorphisms[iso]))
+    #         print("         SUCCESS: ", isomorphisms[iso][0])
+    #     except:
+    #         print("         FAILED: ", isomorphisms[iso][0])
+    #         continue
+
+    # return cube
+
+    states = generate_Kauffman_States(n, k)
+
+    homDegrees        = [[] for _ in range(k * n - 1)]
+    indexes           = [[] for _ in range(k * n - 1)]
+    temperlyLiebWords = [[] for _ in range(k * n - 1)]
+
+    generateHomdegrees(states, homDegrees, indexes, temperlyLiebWords)
+    maps = findDirectMaps(homDegrees, indexes, temperlyLiebWords)
+
+    # Collect every vertex that appears in the graph
+    all_vertices = set(maps.keys())
+    for targets in maps.values():
+        for target, _, _ in targets:
+            all_vertices.add(target)
+
+    # Vertices to drop: any that trigger at least one isomorphism check
+    removed = {v for v in all_vertices if _fails_isomorphism_check(v, n, k)}
+
+    # Rebuild maps without removed sources or removed targets
+    filtered_maps = {}
+    for source, targets in maps.items():
+        if source in removed:
+            continue
+        kept_targets = [(t, g, p) for t, g, p in targets if t not in removed]
+        if kept_targets:
+            filtered_maps[source] = kept_targets
+
+    return build_graph(filtered_maps)
+
 
 if __name__ == "__main__":
     n = int(input("Enter the number of Strands "))

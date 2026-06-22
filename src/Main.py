@@ -1,6 +1,6 @@
 from multiprocessing import Process, Pipe
 
-from src.Computation.mapping import cube_of_resolution
+from src.Computation.mapping import cube_of_resolution, whittled_complex
 from src.Visuals.Display import Display, FigureContainer, HorizontalSplit
 from src.Visuals.GraphDisplay import GraphContainer
 from src.Visuals.TorusBraidVisual import visualize_kauffman_state
@@ -9,7 +9,7 @@ parent_conn, child_conn = Pipe()
 
 def run_graph(conn, n, k, dim):
 
-    graph = cube_of_resolution(n, k)
+    graph = whittled_complex(n, k)
     root_label = "0" * (k * (n - 1))
 
     GraphContainer(
@@ -21,13 +21,13 @@ def run_graph(conn, n, k, dim):
 
 def graph_click(conn, state: str):
     
-    # print("CLICKED: ", state)
+    print("CLICKED: ", state)
     conn.send(state)
 
 if __name__ == "__main__":
 
     n = 3
-    k = 3
+    k = 2
     dim = 2
 
     graph_process = Process(
