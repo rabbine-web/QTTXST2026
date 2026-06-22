@@ -1,10 +1,9 @@
 import json
-import tempfile
 import webview
+import tkinter as tk
+from pathlib import Path
 
 import igraph as ig
-
-from .Display import Container
 
 
 class GraphAPI:
@@ -17,11 +16,25 @@ class GraphAPI:
             self.on_click(node_id)
 
 
-class GraphContainer(Container):
+class GraphContainer():
 
-    def __init__(self, graph: ig.Graph, on_click=None):
+    def __init__(
+            self, 
+            graph: ig.Graph, 
+            on_click=None, 
+            dim=3,
+            root_node=None
+        ):
+
         self.graph = graph
         self.on_click = on_click
+
+        if dim==2:
+            self.source = "force_graph_2d.html"
+        elif dim==3:
+            self.source = "force_graph_3d.html"
+        else:
+            raise ValueError("Dimension must be 2 or 3")
 
         nodes = [
             {
@@ -40,85 +53,50 @@ class GraphContainer(Container):
             for e in self.graph.es
         ]
 
-        graph_data = {
+        if root_node is None:
+            root_node = nodes[0]["id"]
+
+        print("ROOT NODE: ", root_node)
+
+        self.graph_data = {
             "nodes": nodes,
-            "links": links
+            "links": links,
+            "root": root_node
         }
 
-        html = f"""
-<!DOCTYPE html>
-<html>
-<head>
-    <script src="https://unpkg.com/3d-force-graph"></script>
-    <style>
-        html, body {{
-            margin: 0;
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-        }}
-
-        #graph {{
-            width: 100vw;
-            height: 100vh;
-        }}
-    </style>
-</head>
-<body>
-
-<div id="graph"></div>
-
-<script>
-
-const data = {json.dumps(graph_data)};
-
-const Graph = ForceGraph3D()(
-    document.getElementById('graph')
-);
-
-Graph.graphData(data);
-
-Graph.onNodeClick(node => {{
-
-    console.log("clicked", node.id);
-
-    if (
-        window.pywebview &&
-        window.pywebview.api
-    ) {{
-        window.pywebview.api.on_node_click(node.id);
-    }}
-
-}});
-
-</script>
-
-</body>
-</html>
-"""
-
-        with tempfile.NamedTemporaryFile(
-            mode="w",
-            suffix=".html",
-            delete=False,
-            encoding="utf-8"
-        ) as f:
-
-            f.write(html)
-            path = f.name
+    def show(self):
 
         api = GraphAPI(self.on_click)
 
-        webview.create_window(
-            "Graph",
-            path,
-            js_api=api,
-            width=800,
-            height=600
+        html_path = (
+            Path(__file__).parent
+            / "resources"
+            / self.source
         )
 
-        webview.start()
+        tmp = tk.Tk()
+        tmp.withdraw()
 
-    def draw(self, frame: tk.Frame) -> None:
-        
-        pass
+        screen_width = tmp.winfo_screenwidth()
+        screen_height = tmp.winfo_screenheight()
+
+        tmp.destroy()
+
+        window = webview.create_window(
+            "Graph",
+            html_path.as_uri(),
+            js_api=api,
+            width=(screen_width // 2) + 7,
+            height=screen_height,
+            x=-7,
+            y=0
+        )
+
+        def on_loaded():
+            window.evaluate_js(
+                f"loadGraph({json.dumps(self.graph_data)});"
+            )
+
+        window.events.loaded += on_loaded
+
+        webview.start()
