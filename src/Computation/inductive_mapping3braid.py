@@ -1,4 +1,5 @@
-import bisect
+import igraph as ig
+import matplotlib.pyplot as plt
 """
 Using n = 3 case to reduce cases
 """
@@ -108,7 +109,7 @@ def generate_maps(k):
                 if(not -1 in existing_maps):
                     existing_maps.append((prev_state, -1))
                     maps_of_hom_deg[potential_state] = existing_maps
-            print("repeating " + str(len(states_of_hom_deg)) + " " + str(states_of_hom_deg[-1]))
+            #print("repeating " + str(len(states_of_hom_deg)) + " " + str(states_of_hom_deg[-1]))
         
             
             for potential_state in (type_two_indirect):
@@ -139,7 +140,7 @@ def generate_maps(k):
     for key, value in maps_of_hom_deg.items():
         print(f"From {bin(key)[2:].zfill(k*(n - 1))} takes element from { ([",  ".join("(" + bin(v[0])[2:].zfill(k*(n - 1)) + ", " + str(v[1]) + ")" for v in value)]) } ")
     
-
+    return (states_of_hom_deg, maps_of_hom_deg)
 """
 When fed a binary string, will respond whether it corresponds to a type 
 TODO need to implement + - closed loops to seperate out two_target/sources
@@ -210,7 +211,39 @@ def generate_indirect_type_two(prev_state):
 
 
 if __name__ == "__main__":
-    k = 2
-    generate_maps(k)
-    #print(bin(mask))
-    #print(is_valid(0b1010, n))
+    k = 3
+
+    states_and_map = generate_maps(k)
+    #print(states_and_map)
+    
+    g = ig.Graph(directed = True)
+    edges = []
+    edge_properties = []
+
+    vertices = [bin(item)[2:] for sublist in states_and_map[0] for item in sublist]
+    print(vertices)
+    g.add_vertices(vertices)
+    g.vs["label"] = vertices
+
+
+    for child_id, children in states_and_map[1].items(): 
+        for parent_id, prop in children: 
+            parent_str = bin(parent_id)[2:]
+            child_str = bin(child_id)[2:]
+            #print((parent_str, child_str))
+            edges.append((parent_str, child_str)) 
+            edge_properties.append(prop)
+
+    g.add_edges(edges)
+    g.es["property"] = edge_properties
+
+    root_str = bin(states_and_map[0][0][0])[2:] # Adjust indexing depending on your exact nested structure
+    root_index = g.vs.find(root_str).index
+    
+    # 6. Generate the tree layout using the correct root index
+    layout = g.layout_reingold_tilford(root=[root_index]) 
+    
+    fig, ax = plt.subplots(figsize=(6, 6))
+    ig.plot(g, layout=layout, target=ax, vertex_size=40)
+    plt.show()
+

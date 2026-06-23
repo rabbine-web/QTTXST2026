@@ -11,7 +11,7 @@ def detect_closed_loops(kauf_state, n, k):
 
             if has_element:
                 forward_strands.append(np.array([element_index, element_index + 1, position]))
-                #print("initially " + str(forward_strands))
+                print("initially " + str(forward_strands))
                 # only grows the range
                 changed_range = check_connection(forward_strands)
                 merged = 0
@@ -23,7 +23,7 @@ def detect_closed_loops(kauf_state, n, k):
                         break
 
                     if forward_strands[-1][0] == forward_strands[i][0] and forward_strands[-1][1] == forward_strands[i][1] :
-                        #print("closed loop detected 1")
+                        print("closed loop detected 1")
                         # TODO: understand why this one should be i but not the others?
                         closed_loops.append((forward_strands.pop(i)[2], position))
 
@@ -39,23 +39,23 @@ def detect_closed_loops(kauf_state, n, k):
                             break
 
                         if forward_strands[-1][0] == forward_strands[i][0] and forward_strands[-1][1] == forward_strands[i][1] :
-                            #print("closed loop detected 2")
+                            print("closed loop detected 2")
                             closed_loops.append((forward_strands.pop(i)[2], position))
 
                     # get potentially merged range index, if -1 then no merge
                     changed_range = check_connection(forward_strands)
                     merged += 1
                 
-                #print("merged to " + str(forward_strands))
+                print("merged to " + str(forward_strands))
 
                 # if there's not 2 forward facing ends, then it's impossible to loop since we need 2 forward facing ends to connect to each other
                 if(forward_strands[-1][0] == forward_strands[-1][1]):
-                    #print("closed loop detected 3")
+                    print("closed loop detected 3")
                     closed_loops.append((forward_strands.pop()[2], position))
                     forward_strands.append(np.array([element_index, element_index + 1, position]))
 
                 elif merged == 1:
-                    #print("merged backwards, impossible to loop")
+                    print("merged backwards, impossible to loop")
                     forward_strands.pop()
                     
                 # only merges twice if merging top and bottom
@@ -64,12 +64,12 @@ def detect_closed_loops(kauf_state, n, k):
                     # or when canceled [0,3] by a merge of [0, 1] splits into [1,3]
  
                     forward_strands.append(np.array([element_index, element_index + 1, position]))
-                #print("ends up " + str(forward_strands))
-                #print()
+                print("ends up " + str(forward_strands))
+                print()
 
 
     
-    #print("leftover forward_strands: " + str(forward_strands))
+    print("leftover forward_strands: " + str(forward_strands))
 
     return closed_loops
 
@@ -86,7 +86,7 @@ def check_connection(forward_strands):
             return False
 
 
-        ##print("checking connection, > 0")
+        #print("checking connection, > 0")
         if(forward_strands[changed_range][0] == forward_strands[other_range][1]):
             # since connected bottom to top, set new bottom
             forward_strands[changed_range][0] = forward_strands[other_range][0]
@@ -124,7 +124,6 @@ if __name__ == "__main__":
     n = 4
     k = 5
     """
-    """
     kauf_state = 0b101001100
     n = 4
     k = 3
@@ -132,4 +131,5 @@ if __name__ == "__main__":
     kauf_state = 0b101010010010001100
     n = 4
     k = 6
+    """
     print(detect_closed_loops(kauf_state, n, k))
