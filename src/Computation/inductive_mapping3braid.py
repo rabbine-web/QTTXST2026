@@ -1,4 +1,8 @@
 import bisect
+"""
+Using n = 3 case to reduce cases
+"""
+
 
 """
 Args:
@@ -6,7 +10,8 @@ Args:
     k is the number of repitions
         integers will be represent states through binary, 
 """
-def generate_maps(n, k):
+def generate_maps(k):
+    n = 3
     # create a list of valid states for every hom degree
     states_of_hom_deg = [[0]]
     # map end result to the prev_state and the element added to get there
@@ -71,7 +76,7 @@ def generate_maps(n, k):
                         print("not valid " + bin(temp_state))
                         continue
 
-                    print("valid " + bin(temp_state))
+                    #print("valid " + bin(temp_state))
                     existing_maps = maps_of_hom_deg.get(temp_state, [])
                     if(not temp_state in states_of_hom_deg[-1]):
                         states_of_hom_deg[-1].append(temp_state)
@@ -79,7 +84,7 @@ def generate_maps(n, k):
                     #if(not exists_in_map(existing_maps, (prev_state, temp_state), added_elm)):
                     if(not (prev_state, added_elm) in existing_maps):
                         existing_maps.append((prev_state, added_elm))
-                        maps_of_hom_deg[(prev_state, temp_state)] = existing_maps
+                        maps_of_hom_deg[temp_state] = existing_maps
                 
             
             # TODO: observe how much element n-1 has lee way?
@@ -87,20 +92,40 @@ def generate_maps(n, k):
 
             type_one_indirect = generate_indirect_type_one(prev_state)
             type_two_indirect = generate_indirect_type_two(prev_state)
-            for potential_state in (type_one_indirect + type_two_indirect):
+            print("potential cases include: " + str([bin(x) for x in type_one_indirect]) + " and " + str([bin(y) for y in type_two_indirect]))
+            
+            for potential_state in (type_one_indirect):
                 if(not is_valid(potential_state, n=n)):
                     print("not valid " + bin(potential_state))
                     continue
 
                 print("indirect found from " + bin(prev_state) + " to " + bin(potential_state))
-                existing_maps = maps_of_hom_deg.get((prev_state, potential_state), [])
+
+                existing_maps = maps_of_hom_deg.get(potential_state, [])
+                if(not potential_state in states_of_hom_deg[-1]):
+                    states_of_hom_deg[-1].append(potential_state)
+
+                if(not -1 in existing_maps):
+                    existing_maps.append((prev_state, -1))
+                    maps_of_hom_deg[potential_state] = existing_maps
+            print("repeating " + str(len(states_of_hom_deg)) + " " + str(states_of_hom_deg[-1]))
+        
+            
+            for potential_state in (type_two_indirect):
+                if(not is_valid(potential_state, n=n)):
+                    print("not valid " + bin(potential_state))
+                    continue
+
+                print("indirect found from " + bin(prev_state) + " to " + bin(potential_state))
+
+                existing_maps = maps_of_hom_deg.get(potential_state, [])
                 if(not potential_state in states_of_hom_deg[-1]):
                     states_of_hom_deg[-1].append(potential_state)
 
                 if(not -2 in existing_maps):
-                    existing_maps.append(-2)
-                    maps_of_hom_deg[(prev_state, potential_state)] = existing_maps
-
+                    existing_maps.append((prev_state, -2))
+                    maps_of_hom_deg[potential_state] = existing_maps
+            print("repeating " + str(len(states_of_hom_deg)) + " " + str(states_of_hom_deg[-1]))
         
 
     #print(states_of_hom_deg)
@@ -112,7 +137,7 @@ def generate_maps(n, k):
 
 
     for key, value in maps_of_hom_deg.items():
-        print(f"From {bin(key[0])} takes element {[v + 1 for v in value]} to {bin(key[1])}")
+        print(f"From {bin(key)[2:].zfill(k*(n - 1))} takes element from { ([",  ".join("(" + bin(v[0])[2:].zfill(k*(n - 1)) + ", " + str(v[1]) + ")" for v in value)]) } ")
     
 
 """
@@ -122,17 +147,17 @@ TODO need to implement + - closed loops to seperate out two_target/sources
 def is_valid(value, n):
     #print("chceking valid  " + bin(value))
     # since in most cases we only add if no 1 in this position before
-    mask = 0b11 << (n - 2) | 0b11
+    mask = 0b111
 
-    one_source = 0b1 << (n - 1) | 0b0
-    one_target = 0b1 << (n - 1) | 0b1
-    two_source = 0b1 << (n - 1) | 0b1
-    two_target = 0b1 << (n - 1) | 0b11
+    one_source = 0b100
+    one_target = 0b101
+    two_source = 0b101
+    two_target = 0b111
 
     index = 0
 
 
-    while(value >= 0b1 << index):
+    while(value >= (0b1 << index)):
         two_reps = (value >> index) & mask
         
         if(two_reps == one_source):
@@ -143,29 +168,19 @@ def is_valid(value, n):
 
     return True
 
-"""
-def exists_in_map(existing_maps, key, new_elm):
-    # Binary search to find insertion point
-    idx = bisect.bisect_left(existing_maps, new_elm)
-    # Verify index boundaries and match
-    return idx < len(existing_maps) and existing_maps[idx] == new_elm
-"""
-
-
+# technically 2 cases for 4 strand
 def generate_indirect_type_one(prev_state):
     indirect_states = []
     index = 0
-    mask = 0b11 << (n - 2) | 0b11
+    mask = 0b111 
 
-    type1_potential = 0b00 << (n - 2) | 0b01
-    type1_end_one = 0b11 << (n - 2) | 0b00
-    type1_end_two = 0b10 << (n - 2) | 0b10
+    type1_potential = 0b001
+    type1_end = 0b110
     while(prev_state >= (0b1 << index)):
-        if((prev_state >> index) & mask == type1_potential):
+        if(((prev_state >> index) & mask) == type1_potential):
             # need to set up the site where replacing, sets those 4 digits to 0
-            cleared_state = prev_state & (~(mask << index))
-            indirect_states.append(cleared_state | (type1_end_one << index))
-            indirect_states.append(cleared_state | (type1_end_two << index))
+            cleared_state = prev_state & ~(mask << index)
+            indirect_states.append(cleared_state | (type1_end << index))
         index += 1
     return indirect_states
     
@@ -174,18 +189,18 @@ def generate_indirect_type_one(prev_state):
 def generate_indirect_type_two(prev_state):
     indirect_states = []
     index = 0
-    mask = 0b11 << (n - 2) | 0b11
+    mask = 0b111
 
-    type2_potential_one = 0b00 << (n - 2) | 0b01
-    type2_potential_two = 0b11 << (n - 2) | 0b00
+    type2_potential_one = 0b001
+    type2_potential_two = 0b110
     #TODO: check if 10_01 is possible for indirect
-    type2_end = 0b10 << (n - 2) | 0b11
+    type2_end = 0b111
     while(prev_state > (0b1 << index)):
         masked_state = (prev_state >> index) & mask
-        if(masked_state == type2_potential_one or masked_state == type2_potential_two):
+        if(index % 3 != 0 and (masked_state == type2_potential_one or masked_state == type2_potential_two)):
             # need to set up the site where replacing
-            cleared_state = prev_state | (~(mask << index))
-            indirect_states.append(cleared_state & (type2_end << index))
+            cleared_state = prev_state & ~(mask << index)
+            indirect_states.append(cleared_state | (type2_end << index))
         index += 1
     return indirect_states
 
@@ -195,9 +210,7 @@ def generate_indirect_type_two(prev_state):
 
 
 if __name__ == "__main__":
-    n = 4
     k = 2
-    generate_maps(n, k)
-    mask = 0b11 << (n - 2) | 0b11
+    generate_maps(k)
     #print(bin(mask))
     #print(is_valid(0b1010, n))

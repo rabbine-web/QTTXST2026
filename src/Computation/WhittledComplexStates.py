@@ -1,4 +1,3 @@
-import numpy as np
 import timeit
 import random
 
@@ -111,16 +110,16 @@ if __name__ == "__main__":
         if isinstance(result_val, list):
             #print(kauf_state.bit_count())
             homologous_degree[kauf_state.bit_count()].append(bin(kauf_state)[2:].zfill((n-1) * k) + " : [" + ', '.join(result_val) + "]")
-            print(bin(kauf_state)[2:].zfill((n-1) * k ) + " : [" + ', '.join(result_val) + "]")
-        else:
-            print(bin(kauf_state)[2:].zfill((n-1) * k ) + " : " + labels[result_val])
+            #print(bin(kauf_state)[2:].zfill((n-1) * k ) + " : [" + ', '.join(result_val) + "]")
+        #else:
+        #    print(bin(kauf_state)[2:].zfill((n-1) * k ) + " : " + labels[result_val])
     
-    """
+    
     for kauf_set in homologous_degree:
         for state in kauf_set:
             print(state)
         print()
-        """
+        
 
                 
 

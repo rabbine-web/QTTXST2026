@@ -50,10 +50,11 @@ def detect_closed_loops(kauf_state, n, k):
                     num_closed_loops += 1
                     forward_strands.pop()
                     forward_strands.append([element_index, element_index + 1])
-
+                """
                 elif merged == 1:
                     print("merged backwards, impossible to loop")
                     forward_strands.pop()
+                """
                     
                 # only merges twice if merging top and bottom
                 if merged == 2:
@@ -125,14 +126,7 @@ if __name__ == "__main__":
     n = 4
     k = 3
     """
-    """
-    kauf_state = 0b1111
-    n = 3
-    k = 2
-    """
-    
-    kauf_state = 0b1010
-    n = 3
-    k = 2
-    
+    kauf_state = 0b101010010010001100
+    n = 4
+    k = 6
     print(detect_closed_loops(kauf_state, n, k))
