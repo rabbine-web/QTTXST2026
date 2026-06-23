@@ -1,101 +1,127 @@
 """
-Torus Braid Visualizer — Interactive
-=====================================
-Click a crossing cell to cycle through three modes:
-  Mode 0 (default): X crossing (over/under strands)
-  Mode 1: Two vertical lines (left edge and right edge of cell)
-  Mode 2: Two horizontal lines (top edge and bottom edge of cell)
+display/TorusBraidVisual.py
+
+Torus braid visualizer.
+
+Click a crossing cell to cycle through three rendering modes:
+  Mode 0 – X crossing (over/under strands)
+  Mode 1 – Two horizontal lines (top and bottom edges of cell)
+  Mode 2 – Two arcs on left/right edges curving inward
+
+Public API:
+  draw_torus_braid          – draw onto an existing Axes (interactive)
+  state_to_crossing_modes   – integer state  → crossing-modes dict
+  output_str_to_crossing_modes – binary string → crossing-modes dict
+  visualize_kauffman_state  – binary string  → Figure (for embedding)
+  visualize_tlword          – TL-word string → Figure (for embedding)
+  state_set_display         – set of states  → grid Figure
 """
 
-import matplotlib.pyplot as plt
 import numpy as np
-import tkinter as tk
+import matplotlib.pyplot as plt
 
-from ..Computation.TemperleyToState import *
-from .Display import Display, FigureContainer
+from src.Computation.TemperleyLieb import kauffmanstates
+
+# ── TL-word → Kauffman state transform ────────────────────────────────────
+
+def transform(in_str: str, p: int = None) -> str:
+    """Convert a TL-word binary string to its Kauffman state binary string."""
+    out = []
+    for i in range(len(in_str) - 1, -1, -1):
+        if in_str[i] == "1":
+            out = ["0", "1"] + out
+        else:
+            if out and out[0] == "0":
+                out[0] = "1"
+            else:
+                out = ["1", "0"] + out
+    result = "".join(out)
+    pad = 2 * (p if p is not None else len(in_str))
+    return result.zfill(pad)
 
 
-def draw_torus_braid(p: int, q: int, ax, title=None, initial_modes=None):
+# ── Core drawing ───────────────────────────────────────────────────────────
+
+def draw_torus_braid(
+    p: int,
+    q: int,
+    ax,
+    title: str = None,
+    initial_modes: dict = None,
+) -> None:
     """
-    initial_modes: dict mapping (col, row) -> mode (0,1,2) for crossing cells.
-                   Crossings not in the dict default to mode 0.
+    Draw an interactive torus braid on ax.
+
+    Parameters
+    ----------
+    p              : number of full twists (k)
+    q              : number of strands    (n)
+    ax             : matplotlib Axes to draw on
+    initial_modes  : dict mapping (col, row) → mode {0, 1, 2};
+                     crossings absent from dict default to mode 0
     """
     if q < 2:
         raise ValueError("q must be >= 2.")
     if p < 1:
         raise ValueError("p must be >= 1.")
-    if ax is None:
-        raise ValueError("ax must be provided.")
 
     rows = q - 1
     cols = p * (q - 1)
-
-    lw    = 2.5
-    gap   = 0.18
+    lw   = 2.5
+    gap  = 0.18
     color = "#1a6fc4"
 
-    def is_crossing(col, row):
+    def is_crossing(col: int, row: int) -> bool:
         if col < 0 or col >= cols or row < 0 or row >= rows:
             return False
         return (row % (q - 1)) == (col % (q - 1))
 
-    def strand_y(col, row):
-        has_crossing_below = any(is_crossing(col, r) for r in range(0, row))
-        has_crossing_above = any(is_crossing(col, r) for r in range(row + 1, rows))
-        if has_crossing_below and has_crossing_above:
+    def strand_y(col: int, row: int) -> tuple[float, float]:
+        below = any(is_crossing(col, r) for r in range(0, row))
+        above = any(is_crossing(col, r) for r in range(row + 1, rows))
+        if below and above:
             return row, row + 1
-        elif has_crossing_below:
+        elif below:
             return row + 1, row + 1
-        elif has_crossing_above:
+        elif above:
             return row, row
-        else:
-            return row + 0.5, row + 0.5
+        return row + 0.5, row + 0.5
 
-    # Track crossing mode: (col, row) -> 0, 1, or 2
-    crossing_modes = {}
-    # Store the artists for each crossing cell so we can redraw them
-    crossing_artists = {}
+    crossing_modes:   dict = {}
+    crossing_artists: dict = {}
 
-    def draw_crossing(col, row, mode):
-        """Draw (or redraw) a crossing cell in the given mode. Returns list of artists."""
+    def draw_crossing(col: int, row: int, mode: int) -> list:
         xl, xr = col, col + 1
         yb, yt = row, row + 1
         cx, cy = col + 0.5, row + 0.5
         artists = []
 
         if mode == 0:
-            # Over-strand: bottom-left → top-right
-            ln, = ax.plot([xl, xr], [yb, yt],
-                          color=color, lw=lw, solid_capstyle="butt", zorder=4)
+            ln, = ax.plot([xl, xr], [yb, yt], color=color, lw=lw,
+                          solid_capstyle="butt", zorder=4)
             artists.append(ln)
-            # Under-strand: top-left → bottom-right, broken
-            ln, = ax.plot([xl,       cx - gap], [yt,       cy + gap],
-                          color=color, lw=lw, solid_capstyle="butt", zorder=3)
+            ln, = ax.plot([xl, cx - gap], [yt, cy + gap], color=color, lw=lw,
+                          solid_capstyle="butt", zorder=3)
             artists.append(ln)
-            ln, = ax.plot([cx + gap, xr      ], [cy - gap, yb      ],
-                          color=color, lw=lw, solid_capstyle="butt", zorder=3)
+            ln, = ax.plot([cx + gap, xr], [cy - gap, yb], color=color, lw=lw,
+                          solid_capstyle="butt", zorder=3)
             artists.append(ln)
 
         elif mode == 1:
-            # Two horizontals: top edge and bottom edge (straight lines)
-            ln, = ax.plot([xl, xr], [yt, yt],
-                          color=color, lw=lw, solid_capstyle="butt", zorder=4)
+            ln, = ax.plot([xl, xr], [yt, yt], color=color, lw=lw,
+                          solid_capstyle="butt", zorder=4)
             artists.append(ln)
-            ln, = ax.plot([xl, xr], [yb, yb],
-                          color=color, lw=lw, solid_capstyle="butt", zorder=4)
+            ln, = ax.plot([xl, xr], [yb, yb], color=color, lw=lw,
+                          solid_capstyle="butt", zorder=4)
             artists.append(ln)
 
         elif mode == 2:
-            # Two arcs on left and right edges, curving inward toward cell centre
-            t = np.linspace(0, 1, 60)
-            # Left arc: (xl,yb) -> (xl,yt), control point pulled right to cx
-            bx = (1-t)**2*xl + 2*(1-t)*t*cx + t**2*xl
-            by = (1-t)**2*yb + 2*(1-t)*t*cy + t**2*yt
+            t  = np.linspace(0, 1, 60)
+            bx = (1-t)**2 * xl + 2*(1-t)*t * cx + t**2 * xl
+            by = (1-t)**2 * yb + 2*(1-t)*t * cy + t**2 * yt
             ln, = ax.plot(bx, by, color=color, lw=lw, solid_capstyle="butt", zorder=4)
             artists.append(ln)
-            # Right arc: (xr,yb) -> (xr,yt), control point pulled left to cx
-            bx = (1-t)**2*xr + 2*(1-t)*t*cx + t**2*xr
-            by = (1-t)**2*yb + 2*(1-t)*t*cy + t**2*yt
+            bx = (1-t)**2 * xr + 2*(1-t)*t * cx + t**2 * xr
             ln, = ax.plot(bx, by, color=color, lw=lw, solid_capstyle="butt", zorder=4)
             artists.append(ln)
 
@@ -104,18 +130,14 @@ def draw_torus_braid(p: int, q: int, ax, title=None, initial_modes=None):
     # Initial draw
     for col in range(cols):
         for row in range(rows):
-            xl, xr = col, col + 1
-            yb, yt = row, row + 1
-
             if is_crossing(col, row):
                 mode = (initial_modes or {}).get((col, row), 0)
-                crossing_modes[(col, row)] = mode
+                crossing_modes[(col, row)]   = mode
                 crossing_artists[(col, row)] = draw_crossing(col, row, mode)
             else:
-                y_left, y_right = strand_y(col, row)
-                ax.plot([xl, xr], [y_left, y_right],
-                        color=color, lw=lw, solid_capstyle="butt", zorder=2)
-
+                yl, yr = strand_y(col, row)
+                ax.plot([col, col + 1], [yl, yr], color=color, lw=lw,
+                        solid_capstyle="butt", zorder=2)
 
     ax.set_xlim(-0.05, cols + 0.05)
     ax.set_ylim(-0.1,  rows + 0.1)
@@ -124,75 +146,125 @@ def draw_torus_braid(p: int, q: int, ax, title=None, initial_modes=None):
     def on_click(event):
         if event.inaxes is not ax:
             return
-        # Convert click to grid cell
         col = int(np.floor(event.xdata))
         row = int(np.floor(event.ydata))
         if (col, row) not in crossing_modes:
             return
-        # Remove old artists
         for artist in crossing_artists[(col, row)]:
             artist.remove()
-        # Cycle mode
         new_mode = (crossing_modes[(col, row)] + 1) % 3
-        crossing_modes[(col, row)] = new_mode
+        crossing_modes[(col, row)]   = new_mode
         crossing_artists[(col, row)] = draw_crossing(col, row, new_mode)
         ax.figure.canvas.draw_idle()
 
     ax.figure.canvas.mpl_connect("button_press_event", on_click)
 
-def state_to_crossing_modes(state, p, q):
-    """
-    Convert an integer state to a crossing_modes dict for draw_torus_braid.
-    Bit i of the reversed binary string maps to the i-th crossing (enumerated
-    col-major, bottom-to-top). Bit value 1 -> mode 1, 0 -> mode 0.
-    """
+
+# ── State / mode conversion helpers ───────────────────────────────────────
+
+def state_to_crossing_modes(state: int, p: int, q: int) -> dict:
+    """Integer state → crossing-modes dict.  Bit 1 → mode 2,  bit 0 → mode 1."""
     rows = q - 1
     cols = p * (q - 1)
- 
-    def is_crossing(col, row):
-        return (row % (q - 1)) == (col % (q - 1))
- 
-    # Enumerate crossings in the same order as the binary string (col-major, row asc)
+
     crossings = [
         (col, row)
         for col in range(cols)
         for row in range(rows)
-        if is_crossing(col, row)
+        if (row % (q - 1)) == (col % (q - 1))
     ]
- 
-    modes = {}
-    for i, (col, row) in enumerate(crossings):
-        bit = (state >> i) & 1
-        modes[(col, row)] = 2 if bit else 1
-    return modes
+    return {
+        (col, row): (2 if (state >> i) & 1 else 1)
+        for i, (col, row) in enumerate(crossings)
+    }
 
-def state_set_display(state_set, p, q, title="Kauffman States"):
+
+def output_str_to_crossing_modes(out_str: str, p: int, q: int) -> dict:
+    """Binary string → crossing-modes dict.  '1' → mode 2,  '0' → mode 1."""
+    rows = q - 1
+    cols = p * (q - 1)
+
+    crossings = [
+        (col, row)
+        for col in range(cols)
+        for row in range(rows)
+        if (row % (q - 1)) == (col % (q - 1))
+    ]
+    return {
+        (col, row): (2 if i < len(out_str) and out_str[i] == "1" else 1)
+        for i, (col, row) in enumerate(crossings)
+    }
+
+
+# ── Public visualization factories ─────────────────────────────────────────
+
+def visualize_kauffman_state(state_str: str, p: int, q: int):
     """
-    Create a figure displaying all states in `state_set` as torus braid diagrams.
-    Returns the matplotlib `fig` (does not show it).
-    Each diagram is labelled with its reversed binary string.
+    Return a matplotlib Figure for state_str on T(q, p).
+    Sized to fill whatever Tk canvas it is embedded in.
     """
+    modes  = output_str_to_crossing_modes(state_str, p, q)
+    cols   = p * (q - 1)
+    rows   = q - 1
+    aspect = cols / max(rows, 1)
+
+    fig, ax = plt.subplots(figsize=(8 * aspect, 8), facecolor="#f7f7f5")
+    ax.set_facecolor("#f7f7f5")
+    draw_torus_braid(p, q, ax=ax, initial_modes=modes)
+    ax.set_title(f"Kauffman: {state_str}", fontsize=10, family="monospace", pad=6)
+    return fig
+
+
+def visualize_tlword(in_str: str, p: int = None):
+    """Return a Figure for a TL-word string (transforms to Kauffman state first)."""
+    q = 3
+    if p is None:
+        p = len(in_str)
+    out_str = transform(in_str, p=p)
+
+    print(f"Input  ({len(in_str):2d} bits): {in_str}")
+    print(f"Output ({len(out_str):2d} bits): {out_str}")
+
+    modes = output_str_to_crossing_modes(out_str, p, q)
+    fig, ax = plt.subplots(
+        figsize=(p * (q - 1), (q - 1) * 0.9),
+        facecolor="#f7f7f5",
+    )
+    ax.set_facecolor("#f7f7f5")
+    draw_torus_braid(p, q, ax=ax, initial_modes=modes)
+    ax.set_title(
+        f"TL-Word: {in_str}  →  Kauffman: {out_str}",
+        fontsize=10, family="monospace", pad=6,
+    )
+    plt.tight_layout()
+    return fig
+
+
+def state_set_display(
+    state_set,
+    p: int,
+    q: int,
+    title: str = "Kauffman States",
+):
+    """Return a grid Figure of all states in state_set as torus braid diagrams."""
     states = sorted(state_set)
-    num_states = len(states)
-    if num_states == 0:
+    if not states:
         print("Empty set — nothing to display.")
         return None
 
-    # Lay out in a grid, roughly square
-    ncols = int(np.ceil(np.sqrt(num_states)))
-    nrows = int(np.ceil(num_states / ncols))
+    ncols = int(np.ceil(np.sqrt(len(states))))
+    nrows = int(np.ceil(len(states) / ncols))
 
-    cell_w = p * (q - 1)
-    cell_h = (q - 1)
-    fig_w = ncols * cell_w * 0.8
-    fig_h = nrows * cell_h * 0.5 + nrows * 0.4  # extra for labels
+    fig_w = max(ncols * p * (q - 1) * 0.8, 4)
+    fig_h = max(nrows * (q - 1) * 0.5 + nrows * 0.4, 3)
 
-    fig, axes = plt.subplots(nrows, ncols,
-                             figsize=(max(fig_w, 4), max(fig_h, 3)),
-                             facecolor="#f7f7f5")
+    fig, axes = plt.subplots(
+        nrows, ncols,
+        figsize=(fig_w, fig_h),
+        facecolor="#f7f7f5",
+    )
     fig.suptitle(title, fontsize=13, y=1.01)
 
-    # Flatten axes array for easy indexing
     if nrows == 1 and ncols == 1:
         axes = np.array([[axes]])
     elif nrows == 1:
@@ -201,93 +273,19 @@ def state_set_display(state_set, p, q, title="Kauffman States"):
         axes = axes[:, np.newaxis]
 
     total_bits = p * (q - 1)
-
     for idx, state in enumerate(states):
         r, c = divmod(idx, ncols)
-        ax = axes[r][c]
+        ax   = axes[r][c]
         ax.set_facecolor("#f7f7f5")
-        modes = state_to_crossing_modes(state, p, q)
-        draw_torus_braid(p, q, ax=ax, initial_modes=modes)
-        label = format(state, f'0{total_bits}b')[::-1]
-        ax.set_title(label, fontsize=9, pad=3, family="monospace")
+        draw_torus_braid(p, q, ax=ax, initial_modes=state_to_crossing_modes(state, p, q))
+        ax.set_title(
+            format(state, f"0{total_bits}b")[::-1],
+            fontsize=9, pad=3, family="monospace",
+        )
 
-    # Hide any unused axes
-    for idx in range(num_states, nrows * ncols):
+    for idx in range(len(states), nrows * ncols):
         r, c = divmod(idx, ncols)
         axes[r][c].axis("off")
 
     plt.tight_layout()
     return fig
-
-
-def output_str_to_crossing_modes(out_str, p, q):
-    """
-    Map the transform() output string directly to crossing modes.
-      '0' -> mode 1  (two horizontals)
-      '1' -> mode 2  (two arcs)
-    Crossings are enumerated col-major, row ascending (matching state_to_crossing_modes).
-    """
-    rows = q - 1
-    cols = p * (q - 1)
-
-    def is_crossing(col, row):
-        return (row % (q - 1)) == (col % (q - 1))
-
-    crossings = [
-        (col, row)
-        for col in range(cols)
-        for row in range(rows)
-        if is_crossing(col, row)
-    ]
-
-    modes = {}
-    for i, (col, row) in enumerate(crossings):
-        if i < len(out_str):
-            modes[(col, row)] = 2 if out_str[i] == '1' else 1
-    return modes
-
-
-def visualize_tlword(in_str, p=None):
-    q = 3
-    if p is None:
-        p = len(in_str)          # p == k
-    out_str = transform(in_str, p=p)
-
-    print(f"Input  ({len(in_str):2d} bits): {in_str}")
-    print(f"Output ({len(out_str):2d} bits): {out_str}")
-
-    modes = output_str_to_crossing_modes(out_str, p, q)
-
-    fig, ax = plt.subplots(figsize=(p * (q-1), (q-1) * 0.9), facecolor="#f7f7f5")
-    ax.set_facecolor("#f7f7f5")
-    draw_torus_braid(p, q, ax=ax, initial_modes=modes)
-    ax.set_title(f"TL-Word: {in_str}  →  Kauffman: {out_str}", fontsize=10, family="monospace", pad=6)
-    plt.tight_layout()
-    return fig
-
-
-def visualize_kauffman_state(state_str, p, q):
-    """
-    Visualize a Kauffman state string directly using `draw_torus_braid`.
-    `state_str` is a binary string where each character '0' or '1' maps to
-    a crossing mode via `output_str_to_crossing_modes`.
-    Returns the matplotlib `fig` (does not show it).
-    """
-
-    modes = output_str_to_crossing_modes(state_str, p, q)
-
-    fig, ax = plt.subplots(figsize=(p * (q-1), (q-1) * 0.9), facecolor="#f7f7f5")
-    ax.set_facecolor("#f7f7f5")
-    draw_torus_braid(p, q, ax=ax, initial_modes=modes)
-    ax.set_title(f"Kauffman: {state_str}", fontsize=10, family="monospace", pad=6)
-    plt.tight_layout()
-    return fig
-
-
-if __name__ == "__main__":
-    word = "011011"
-
-    Display(
-        title=f"Torus Braid Visual: {word}",
-        content=FigureContainer(visualize_kauffman_state(word, p=3, q=3))
-    ).display()
