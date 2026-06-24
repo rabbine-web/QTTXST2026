@@ -1,6 +1,5 @@
 import timeit
 
-from src.Computation.TemperleyToState import transform
 from src.Visuals.Display import Display, FigureContainer, HorizontalSplit
 from src.Visuals.TorusBraidVisual import visualize_kauffman_state
 

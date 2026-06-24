@@ -21,6 +21,6 @@ def transform(in_str, p=None):
     return result
 
 
-# Test
-INPUT = "011101"
-print(transform(INPUT))
+if __name__ == "__main__":
+    INPUT = "011101"
+    print(transform(INPUT))

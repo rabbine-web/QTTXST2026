@@ -274,6 +274,8 @@ def visualize_kauffman_state(state_str, p, q):
     Returns the matplotlib `fig` (does not show it).
     """
 
+    state_str = state_str.zfill(p * (q - 1))
+
     modes = output_str_to_crossing_modes(state_str, p, q)
 
     fig, ax = plt.subplots(figsize=(p * (q-1), (q-1) * 0.9), facecolor="#f7f7f5")
