@@ -1,11 +1,24 @@
+"""
+TODO:
+    - Color direct and indirect maps differently
+    - Click on edges to display map information:
+        - direct maps should just show something like the 
+        new TL state with new TL element is highlighted
+        - indirect maps should have their own path graph
+            - possibly overlayed on the main graph
+    - possibly include states involved in indirect maps
+    (colored if not survivor)
+"""
+
 from multiprocessing import Process, Pipe
 
 import igraph as ig
 
-from src.Computation.TemperleyLieb import (
+from src.Computation.Computation import (
     surviving_tl_states,
     tl_to_kauffman,
-    kauffman_direct_maps
+    kauffman_direct_maps,
+    kauffman_indirect_maps
 )
 from src.Visuals.Display import (
     Display, 
@@ -17,7 +30,12 @@ from src.Visuals.TorusBraidVisual import visualize_kauffman_state
 
 parent_conn, child_conn = Pipe()
 
-def whittled_graph(maxHomDegree: int, numStrands: int) -> ig.Graph:
+"""
+"""
+def whittled_graph(
+    maxHomDegree: int, 
+    numStrands: int
+) -> ig.Graph:
 
     if (numStrands != 3):
         raise ValueError("numStrands must be 3")
@@ -29,8 +47,8 @@ def whittled_graph(maxHomDegree: int, numStrands: int) -> ig.Graph:
     tl_states = [state for states in tl_by_degree for state in states]
     kauffman_by_degree = [
         [
-            tl_to_kauffman(state, maxHomDegree) for state in tl_states
-        ] for tl_states in tl_by_degree
+            tl_to_kauffman(state, numStrands, maxHomDegree) for state in states
+        ] for states in tl_by_degree
     ]
     kauffman_states = [state for states in kauffman_by_degree for state in states]
 
@@ -41,13 +59,17 @@ def whittled_graph(maxHomDegree: int, numStrands: int) -> ig.Graph:
     G.vs["tl"] = tl_states
 
     direct_maps = kauffman_direct_maps(kauffman_by_degree)
+    indirect_maps = kauffman_indirect_maps(
+        kauffman_by_degree,
+        numStrands
+    )
 
     G.add_edges(direct_maps)
+    G.add_edges(indirect_maps)
 
     return G
 
-
-def run_graph(conn, n, k, dim):
+def run_graph(conn, n, k, dim) -> None:
 
     graph = whittled_graph(
         maxHomDegree=k, 
