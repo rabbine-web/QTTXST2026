@@ -22,7 +22,7 @@ TODO:
     - algorithm for kauffman_indirect_maps
     - implementation of kauffman_indirect_maps
 
-AFTERWARDS, n>3:
+AFTERWARD 3-BRAID LIST COMPLETE, n>3:
     - tl_to_kauffman
         - this should be relatively straightforward
     - detect_distinguished_target
