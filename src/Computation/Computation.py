@@ -1,5 +1,44 @@
+"""
+STANDARD:
+
+TEMPERLEY-LIEB WORDS:
+    - lists of integers from 1 to n-1
+    - must manually keep track of n for each word
+
+KAUFFMAN STATES:
+    - strings of ones and zeroes
+    - padding can be truncated or included
 
 """
+
+
+"""
+TODO:
+
+3-BRAID:
+    - find_direct_targets
+    - detect_distinguished_target
+    - test/verify backtrack_isomorphism
+    - algorithm for kauffman_indirect_maps
+    - implementation of kauffman_indirect_maps
+
+AFTERWARDS, n>3:
+    - tl_to_kauffman
+        - this should be relatively straightforward
+    - detect_distinguished_target
+        - known general formula for target/source pattern detections
+    - surviving_tl_states
+        - no currently known mathematical formula
+        - computing naively can give intuition towards a general formula
+    - kauffman_indirect_maps
+        - proper time has not been committed to considering the complexity of generalizing this algorithm
+        - importantly, max length of an indirect path is not known
+"""
+
+
+"""
+Returns a list of all surviving states after whittling Type I, II, and III for a given homological degree.
+States are given as Temperley-Lieb words in the STANDARD format.
 """
 def surviving_tl_states(
     numStrands: int, 
@@ -21,8 +60,6 @@ def surviving_tl_states(
 
     C = [1,2,2,2]
     match (homDegree-1) % 4:
-
-
 
         case 0:
             return [
@@ -49,12 +86,17 @@ def surviving_tl_states(
             ]
 
 """
+Receives a Temperley-Lieb word and converts it to a Kauffman state.
 """
 def tl_to_kauffman(
     tl_state: list[int], 
     numStrands: int,
     padding: int = None
 ) -> str:
+    
+    ## Currently only the 3-braid case is implemented
+    if numStrands != 3:
+        raise ValueError("numStrands must be 3")
 
     in_str = ''.join(str(i) for i in tl_state)
 
@@ -81,6 +123,7 @@ def tl_to_kauffman(
 
 """
 Helper function to check if there exists a direct map between two states.
+Order of the states is important.
 """
 def exists_direct_map(
     state: str, 
@@ -91,7 +134,10 @@ def exists_direct_map(
     return binary_diff & (binary_diff-1) == 0
 
 """
-DONE
+For a list of lists of Kauffman states (ordered by hom degree), returns a list of ordered
+pairs of states where (A, B) is returned iff there is a direct map from A to B.
+
+Works for an arbitrary number of strands since direct maps can flip any bit.
 """
 def kauffman_direct_maps(
     kauff_states_by_degree: list[list[str]]
@@ -137,6 +183,7 @@ def kauffman_indirect_maps(
 
     Optimization:
         - eliminate isomorphism types which can occur in indirect sequence
+        - limit the max possible length of an indirectpath
     """
 
     return []
