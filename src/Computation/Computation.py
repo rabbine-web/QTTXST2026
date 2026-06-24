@@ -191,7 +191,7 @@ def kauffman_indirect_maps(
 """
 For a given state, find all targets which can be reached by a direct map
 # Returns a tuple (target, isomorphism_type, index) where index is the position of the
-# bit to by flipped in the state to reach the target through an isomorphism_type
+# bit to by flipped in the state to reach the target of given isomorphism_type
 """
 def find_direct_targets(
     state: str, 
