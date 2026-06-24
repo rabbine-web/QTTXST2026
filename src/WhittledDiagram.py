@@ -26,9 +26,6 @@ def whittled_graph(maxHomDegree: int) -> ig.Graph:
     ]
     kauffman_states = [state for states in kauffman_by_degree for state in states]
 
-    print("States: ", tl_states)
-    print("States: ", kauffman_states)
-
     G = ig.Graph(directed=True)
 
     G.add_vertices(kauffman_states)
@@ -45,8 +42,6 @@ def whittled_graph(maxHomDegree: int) -> ig.Graph:
                 binary_diff = int(other_state, 2) - int(state, 2)
                 if  binary_diff & (binary_diff-1) == 0:
                     edge = (state, other_state)
-                    print(i)
-                    # print("     Adding edge: ", edge)
                     direct_maps.append(edge)
 
     G.add_edges(direct_maps)
@@ -74,8 +69,8 @@ def graph_click(conn, state: str):
 if __name__ == "__main__":
 
     n = 3
-    k = 10
-    dim = 2
+    k = 500
+    dim = 3
 
     graph_process = Process(
         target=run_graph,
@@ -93,7 +88,6 @@ if __name__ == "__main__":
 
     def display_state(state: str):
 
-        # print("DISPLAYING: ", state)
         display.content.top = FigureContainer(
             visualize_kauffman_state(state, k, n)
         )
