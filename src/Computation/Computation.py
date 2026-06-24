@@ -186,10 +186,37 @@ def kauffman_indirect_maps(
         - limit the max possible length of an indirectpath
     """
 
+    indirect_maps = []
+
+    for i in range(len(kauff_states_by_degree)-1):
+
+        states = kauff_states_by_degree[i]
+
+        while states:
+    
+            ## Find all targets in next hom degree which are reachable by direct maps
+            new_states = []
+            for state in states:
+                new_states.extend(find_direct_targets(state, numStrands))
+            states = new_states
+
+            ## Follow the isomorphisms back to source states
+            new_states = [
+                backtrack_isomorphism(state, isomorphism_type, index)[0] 
+                    for state, isomorphism_type, index in states
+            ]
+            states = new_states
+
+            ## Remove and log any states which form indirect maps
+            directs = []
+            for next_state in kauff_states_by_degree[i+1]:
+                states = []
+
+
     return []
 
 """
-For a given state, find all targets which can be reached by a direct map
+For a given Kauffman state, find all targets which can be reached by a direct map
 # Returns a tuple (target, isomorphism_type, index) where index is the position of the
 # bit to by flipped in the state to reach the target of given isomorphism_type
 """
