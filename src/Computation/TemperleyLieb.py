@@ -1,5 +1,9 @@
 import timeit
 
+from src.Computation.TemperleyToState import transform
+from src.Visuals.Display import Display, FigureContainer, HorizontalSplit
+from src.Visuals.TorusBraidVisual import visualize_kauffman_state
+
 # Define torus braid strands and size
 # See Algorithm Notes Section -1: Standard Notations
 n=3
@@ -30,6 +34,73 @@ the torus braid with n strands and k twists.
 def kauffmanstates(n, k):
     return range(1 << (k*(n-1)))
 
+def surviving_tl_states(numStrands: int, homDegree: int) -> list[list[int]]:
+
+    if numStrands != 3:
+        raise ValueError("numStrands must be 3")
+
+    if homDegree < 0:
+        raise ValueError("homDegree must be at least 0")
+    if homDegree == 0:
+        return [[]]
+    if homDegree == 1:
+        return [[1], [2]]
+    if homDegree == 2:
+        return [[1,2], [2,1]]
+
+    C = [1,2,2,2]
+    match (homDegree-1) % 4:
+
+
+
+        case 0:
+            return [
+                ((homDegree-1)//4)*C + [1],
+                [2,2] + ((homDegree-5)//4)*C + [1] + [2,2]
+            ]
+        
+        case 1:
+            return [
+                ((homDegree-2)//4)*C + [1] + [2],
+                [2,2] + ((homDegree)//4 - 1)*C + [1,2,2] + [1]
+            ]
+
+        case 2:
+            return [
+                ((homDegree-3)//4)*C + [1] + [2,2],
+                [2,2] + ((homDegree-3)//4)*C + [1]
+            ]
+        
+        case 3:
+            return [
+                [2,2] + ((homDegree-4)//4)*C + [1] + [2],
+                ((homDegree)//4 - 1)*C + [1,2,2] + [1]
+            ]
+
+def tl_to_kauffman(tl_state: list[int], p=None) -> str:
+
+    in_str = ''.join(str(i) for i in tl_state)
+
+    out = []  # list of chars, index 0 = leftmost
+
+    for i in range(len(in_str) - 1, -1, -1):  # right to left
+        curr = in_str[i]
+
+        if curr == '2':
+            out = ['0', '1'] + out
+        else:  # curr == '0'
+            if len(out) > 0 and out[0] == '0':
+                out[0] = '1'
+            else:
+                out = ['1', '0'] + out
+
+    result = ''.join(out)
+    if p is None:
+        result = result.zfill(2 * len(in_str))
+    else:
+        result = result.zfill(2 * p)
+
+    return result
 
 """
 Given a kauffman state s (an integer as a binary number) on a braid, and integers n,k
@@ -50,27 +121,11 @@ def temperley2(s, n, k):
         s ^= lsb
     return out
 
-##print(temperleylieb(
-##    state=0b1010,
-##    n=3,
-##    k=2 
-##   ))
-
-states = []
-
 def kauffman():
     global states
     states = kauffmanstates(n,k)
 
-
-if __name__ == "__main__":
-
-    ##print(timeit.timeit(kauffman, number=1))
-    ##for s in states:
-    ##    print(str(bin(s)) + ": ", temperleylieb(s, n, k))
-
-    print
-
+def timeTrial():
 
     def naive():
         return [temperleylieb(state,n,k) for state in states]
@@ -78,21 +133,44 @@ if __name__ == "__main__":
     def other():
         return [temperley2(state,n,k) for state in states]
 
-
-
     """
     Given the 2^k(n-1)
     """
-        
-
-    ##print(naive())
-
 
     print(timeit.timeit(naive, number=1))
     print(timeit.timeit(other, number=1))
 
 
 
+if __name__ == "__main__":
+    for i in range(0, 10):
 
+        states = surviving_tl_states(3, i)
+        kauff = [tl_to_kauffman(state) for state in states]
 
+        print(f"{i}-States: {states}")
+        print(f"{i}-Kauffman: {kauff}")
 
+        if len(states) != 2:
+            print(f"    ERROR: too few states: {len(states)}")
+
+        for state in states:
+
+            k = max(3, i)
+            display = Display(
+                title=f"Torus Braid Visual: {state}",
+                content=HorizontalSplit(ratio=0.33)
+            )
+            display.content.top=FigureContainer(
+                visualize_kauffman_state(
+                    tl_to_kauffman(state, p=k),  
+                    p=k, q=3
+                )
+            )
+            display.display()
+            display.root.mainloop()
+
+            if len(state) != i:
+                print(f"    ERROR: State {state} has length {len(state)}, expected {i}")
+
+        print()
