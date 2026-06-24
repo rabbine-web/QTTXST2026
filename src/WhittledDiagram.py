@@ -4,15 +4,23 @@ import igraph as ig
 
 from src.Computation.TemperleyLieb import (
     surviving_tl_states,
-    tl_to_kauffman
+    tl_to_kauffman,
+    kauffman_direct_maps
 )
-from src.Visuals.Display import Display, FigureContainer, HorizontalSplit
+from src.Visuals.Display import (
+    Display, 
+    FigureContainer, 
+    HorizontalSplit
+)
 from src.Visuals.GraphDisplay import GraphContainer
 from src.Visuals.TorusBraidVisual import visualize_kauffman_state
 
 parent_conn, child_conn = Pipe()
 
-def whittled_graph(maxHomDegree: int) -> ig.Graph:
+def whittled_graph(maxHomDegree: int, numStrands: int) -> ig.Graph:
+
+    if (numStrands != 3):
+        raise ValueError("numStrands must be 3")
 
     if (maxHomDegree < 0):
         raise ValueError("maxHomDegree must be at least 0")
@@ -32,17 +40,7 @@ def whittled_graph(maxHomDegree: int) -> ig.Graph:
     G.vs["label"] = [state.lstrip('0') or '0' for state in kauffman_states]
     G.vs["tl"] = tl_states
 
-    direct_maps = []
-
-    for i in range(0, len(kauffman_by_degree)-1):
-
-        for state in kauffman_by_degree[i]:
-            for other_state in kauffman_by_degree[i+1]:
-                
-                binary_diff = int(other_state, 2) - int(state, 2)
-                if  binary_diff & (binary_diff-1) == 0:
-                    edge = (state, other_state)
-                    direct_maps.append(edge)
+    direct_maps = kauffman_direct_maps(kauffman_by_degree)
 
     G.add_edges(direct_maps)
 
@@ -51,7 +49,10 @@ def whittled_graph(maxHomDegree: int) -> ig.Graph:
 
 def run_graph(conn, n, k, dim):
 
-    graph = whittled_graph(k)
+    graph = whittled_graph(
+        maxHomDegree=k, 
+        numStrands=n
+    )
     root_label = "0"
 
     GraphContainer(
@@ -89,7 +90,11 @@ if __name__ == "__main__":
     def display_state(state: str):
 
         display.content.top = FigureContainer(
-            visualize_kauffman_state(state, k, n)
+            visualize_kauffman_state(
+                state, 
+                len(state)//2+1, 
+                n
+            )
         )
         display.refresh()
 

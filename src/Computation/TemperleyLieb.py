@@ -101,6 +101,26 @@ def tl_to_kauffman(tl_state: list[int], p=None) -> str:
 
     return result
 
+def kauffman_direct_maps(
+        kauff_states_by_degree: list[list[str]]
+    ) -> list[tuple[str, str]]:
+
+    states = kauff_states_by_degree
+
+    edges = []
+
+    for i in range(0, len(states)-1):
+
+        for state in states[i]:
+            for other_state in states[i+1]:
+                
+                binary_diff = int(other_state, 2) - int(state, 2)
+                if  binary_diff & (binary_diff-1) == 0:
+                    edge = (state, other_state)
+                    edges.append(edge)
+
+    return edges
+
 """
 Given a kauffman state s (an integer as a binary number) on a braid, and integers n,k
 number of strands and number of twists repspectively, temperleylieb(s, n, k) outputs a
