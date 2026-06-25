@@ -1,3 +1,5 @@
+from src.Computation.kaufman_to_monoid import kaufman_to_monoid
+
 """
 STANDARD:
 
@@ -275,31 +277,19 @@ def _check_target(state: int, n: int, k: int, stype: str, offset: int, sign: str
     return (False, None)
 
 
-def _is_target3(state_int: int, n: int, k: int) -> tuple[bool, int]:
-    crossings = k * (n - 1)
+def _is_target3(state: str, n: int) -> tuple[bool, int]:
+    cand = kaufman_to_monoid(state, n)
 
-    # Build set of T3 targets: surviving TL states with e1 inserted at first e2e2
-    t3_targets = {}  
-    for hom_deg in range(crossings + 1):
-        try:
-            for tl in surviving_tl_states(n, hom_deg):
-                # Find first e2e2 and insert e1 between them → T3 target TL word
-                for i in range(len(tl) - 1):
-                    if tl[i] == 2 and tl[i+1] == 2:
-                        tgt_tl = tl[:i] + [2, 1, 2] + tl[i+2:]
-                        src_k = int(tl_to_kauffman(tl, n, padding=k)[::-1], 2)
-                        tgt_k = int(tl_to_kauffman(tgt_tl, n, padding=k)[::-1], 2)
-                        diff = tgt_k ^ src_k
-                        idx = diff.bit_length() - 1
-                        t3_targets[tgt_k] = idx
-                        break
-        except (ValueError, IndexError):
-            continue
-
-    if state_int in t3_targets:
-        return (True, t3_targets[state_int])
+    for i in range(len(cand) - 2):
+        if cand[i] == 2 and cand[i + 1] == 1 and cand[i + 2] == 2:
+            wl = cand[:i]
+            wr = cand[i + 3:]
+            if identify_wL(wl, n) and identify_wR(wr, n):
+                return (True, i+1)
 
     return (False, None)
+
+
 
 
 """
@@ -313,3 +303,22 @@ def backtrack_isomorphism(
 ) -> str:
 
     return str(int(str(target), 2) - 2**index).zfill(len(target))
+
+
+def main():
+    state_str = input("Enter Kauffman state (e.g. 0110): ").strip()
+    n = int(input("Enter number of strands: ").strip())
+    k = len(state_str) // (n - 1)
+    state = int(state_str[::-1], 2)
+
+    sign = None
+    if has_circle(state, n, k):
+        print("This state has closed loops.")
+        sign = input("Enter sign (+ or -): ").strip()
+        while sign not in ("+", "-"):
+            sign = input("Invalid. Enter + or -: ").strip()
+
+    print(detect_distinguished_target(state_str, n, sign))
+
+if __name__ == "__main__":
+    main()
