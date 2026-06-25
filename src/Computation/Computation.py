@@ -219,12 +219,88 @@ B is the index of the bit to be flipped (from 1 to zero).
 
 This function detects all THREE isomorphism types.
 """
-def detect_distinguished_target(
-    state: str,
-    numStrands: int
-) -> tuple[int, int]:
+def detect_distinguished_target(state: str, numStrands: int, sign: str = None) -> tuple:
+    k = len(state) // (numStrands - 1)
+    state = int(state[::-1], 2)
 
-    pass
+    for iso_type, stype, offset in [(1,"S1",numStrands-1), (2,"S2",1)]:
+        matched, j = _check_target(state, numStrands, k, stype, offset, sign)
+        if matched:
+            return (iso_type, j)
+
+    matched, j = _is_target3(state, numStrands, k)
+    if matched:
+        return (3, j)
+
+    return (0, None)
+
+def bit(state: int, index: int) -> int:
+    return (state >> index) & 1
+
+
+def has_circle(state: int, n: int, k: int) -> bool:
+    for j in range(k * (n - 1) - (n - 1)):
+        sigma_i = (j % (n - 1)) + 1
+        if not all((pos % (n-1)) + 1 != sigma_i for pos in range(j+2, j+n-2)):
+            continue
+        if bit(state,j)==1 and bit(state,j+1)==0 and bit(state,j+n-2)==0 and bit(state,j+n-1)==1:
+            return True
+    return False
+
+
+def source_matches(state: int, n: int, k: int) -> list:
+    matches = []
+    for j in range(k * (n - 1) - (n - 1)):
+        sigma_i = (j % (n - 1)) + 1
+        f, s, sl, l = bit(state,j), bit(state,j+1), bit(state,j+n-2), bit(state,j+n-1)
+        if not all((pos % (n-1)) + 1 != sigma_i for pos in range(j+2, j+n-2)):
+            continue
+        if f==1 and s==0 and sl==0 and l==0:
+            matches.append(("S1", sigma_i, j))
+        if f==1 and s==0 and sl==0 and l==1 and sigma_i <= n-2:
+            matches.append(("S2", sigma_i, j))
+    return matches
+
+
+def _check_target(state: int, n: int, k: int, stype: str, offset: int, sign: str = None) -> tuple:
+    if stype == "S1" and sign == "+":
+        return (False, None)
+    for j in range(k * (n - 1) - (n - 1)):
+        idx = j + offset
+        if bit(state, idx) != 1:
+            continue
+        candidate = state & ~(1 << idx)
+        if any(t == stype and mj == j for t, _, mj in source_matches(candidate, n, k)):
+            return (True, idx)
+    return (False, None)
+
+
+def _is_target3(state_int: int, n: int, k: int) -> tuple[bool, int]:
+    crossings = k * (n - 1)
+
+    # Build set of T3 targets: surviving TL states with e1 inserted at first e2e2
+    t3_targets = {}  
+    for hom_deg in range(crossings + 1):
+        try:
+            for tl in surviving_tl_states(n, hom_deg):
+                # Find first e2e2 and insert e1 between them → T3 target TL word
+                for i in range(len(tl) - 1):
+                    if tl[i] == 2 and tl[i+1] == 2:
+                        tgt_tl = tl[:i] + [2, 1, 2] + tl[i+2:]
+                        src_k = int(tl_to_kauffman(tl, n, padding=k)[::-1], 2)
+                        tgt_k = int(tl_to_kauffman(tgt_tl, n, padding=k)[::-1], 2)
+                        diff = tgt_k ^ src_k
+                        idx = diff.bit_length() - 1
+                        t3_targets[tgt_k] = idx
+                        break
+        except (ValueError, IndexError):
+            continue
+
+    if state_int in t3_targets:
+        return (True, t3_targets[state_int])
+
+    return (False, None)
+
 
 """
 Given an isomorphism type and an index, backtrack the isomorphism to find the source state.
