@@ -237,3 +237,16 @@ def backtrack_isomorphism(
 ) -> str:
 
     return str(int(str(target), 2) - 2**index).zfill(len(target))
+
+
+"""
+Attempts to flip the bit at the given index in the state.
+Does not check the value of the bit at the given index.
+Preserves the length of original state string if possible.
+"""
+def change_resolution(
+    state: str,
+    index: int
+) -> str:
+    
+    return bin(int(state, 2) ^ (1 << index)).zfill(len(state))

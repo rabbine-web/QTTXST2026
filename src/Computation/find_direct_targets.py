@@ -1,12 +1,19 @@
+from charset_normalizer import detect
 import igraph as ig
 import matplotlib.pyplot as plt
+
+from src.Computation.Computation import (
+    detect_distinguished_target,
+    change_resolution
+)
+
+
 """
 state                       a binary string representing a kaufman state
 numStrands                  the numebr of strands
 
 list[tuple[str, int, int]]  a list of the states, the type of isomorphism, what bit flips back
 """
-
 def find_direct_targets(
     state: str, 
     numStrands: int
@@ -48,7 +55,26 @@ def find_direct_targets(
         # detect if the possible states are targets or not
         for temp_state in possible_states:
             string_state = f"{temp_state:b}"
-            detected = detect_dist_target(string_state, numStrands)
+            detected = detect_distinguished_target(string_state, numStrands)
             direct_targets.append((string_state, detected[0], detected[1]))
             
+    return direct_targets
+
+def find_direct_targets_2(
+    state: str, 
+    numStrands: int
+) -> list[tuple[str, int, int]]:
+    
+    ## max_length is a complete guess and could possibly need to be longer
+    max_length = int(state, 2).bit_length() + numStrands
+
+    direct_targets = []
+
+    for i in range(max_length):
+
+        candidate_state = change_resolution(state, i)
+        isomorphism_type, bit_index = detect_distinguished_target(candidate_state, numStrands)
+        if isomorphism_type != 0:
+            direct_targets.append((candidate_state, isomorphism_type, bit_index))
+        
     return direct_targets
