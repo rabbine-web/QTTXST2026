@@ -9,38 +9,6 @@ Constructs the three layers of maps for the Khovanov chain complex:
 
 Helpers:
   popcount, state_to_bin, node_id, node_label
-
-PATCH NOTES
-===========
-Bug found: build_iso_pairs()'s S2 branch removed only ONE sign-variant
-of the target state (via `break` after the first match in
-signs_by_state.get(target, [])), then stopped. gaussian.py's
-run_cancellation() — the trusted reference — removes ALL sign-variants
-of the target state for an S2 match:
-
-    elif source_type == "S2" and sign == 1:
-        target_state = state | (1 << (j + 1))
-        removed.add((state, 1))
-        for g_sign in signs_by_state.get(target_state, []):
-            removed.add((target_state, g_sign))   # no break — removes both +1 and -1
-
-Because build_generators() always appends (state, 1) before (state, -1),
-the old `break` in build_iso_pairs always paired with +1 first and left
--1 stranded as a false survivor whenever the S2 target state had a
-circle (two sign-variants). This reproduced exactly as: extra survivors
-111010(-), 111101(-), 111011(-) for n=3, k=3 — confirmed against your
-pasted gaussian.py output (15 survivors) vs the old mapping.py output
-(18 survivors, with precisely those 3 extra).
-
-Fix: the S2 branch below now removes every sign-variant of the target
-state (matching run_cancellation exactly), while still recording one
-representative iso pair (state, 1, target, g_sign) per sign-variant so
-that downstream consumers (e.g. the visualization's iso_lookup) still
-have a source/target relationship for each removed sign-variant rather
-than only the first one.
-
-Nothing else in this file was changed. build_direct_maps and
-build_indirect_maps are untouched. gaussian.py is untouched.
 """
 
 from src.Computation.TemperleyLieb import kauffmanstates
@@ -132,13 +100,6 @@ def build_iso_pairs(
                 target = state | (1 << (j + 1))
                 if (state, 1) not in removed:
                     removed.add((state, 1))
-                    # Remove ALL sign variants of target, matching
-                    # run_cancellation's behavior exactly (no early break).
-                    # Previously this loop broke after the first match,
-                    # which — since build_generators always appends
-                    # (state, 1) before (state, -1) — meant the (-1)
-                    # variant of a circle-bearing target was never
-                    # removed, surviving incorrectly.
                     for g_sign in signs_by_state.get(target, []):
                         if (target, g_sign) not in removed:
                             iso_pairs.append((state, 1, target, g_sign))
