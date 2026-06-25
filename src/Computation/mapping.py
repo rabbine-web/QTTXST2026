@@ -9,6 +9,38 @@ Constructs the three layers of maps for the Khovanov chain complex:
 
 Helpers:
   popcount, state_to_bin, node_id, node_label
+
+PATCH NOTES
+===========
+Bug found: build_iso_pairs()'s S2 branch removed only ONE sign-variant
+of the target state (via `break` after the first match in
+signs_by_state.get(target, [])), then stopped. gaussian.py's
+run_cancellation() — the trusted reference — removes ALL sign-variants
+of the target state for an S2 match:
+
+    elif source_type == "S2" and sign == 1:
+        target_state = state | (1 << (j + 1))
+        removed.add((state, 1))
+        for g_sign in signs_by_state.get(target_state, []):
+            removed.add((target_state, g_sign))   # no break — removes both +1 and -1
+
+Because build_generators() always appends (state, 1) before (state, -1),
+the old `break` in build_iso_pairs always paired with +1 first and left
+-1 stranded as a false survivor whenever the S2 target state had a
+circle (two sign-variants). This reproduced exactly as: extra survivors
+111010(-), 111101(-), 111011(-) for n=3, k=3 — confirmed against your
+pasted gaussian.py output (15 survivors) vs the old mapping.py output
+(18 survivors, with precisely those 3 extra).
+
+Fix: the S2 branch below now removes every sign-variant of the target
+state (matching run_cancellation exactly), while still recording one
+representative iso pair (state, 1, target, g_sign) per sign-variant so
+that downstream consumers (e.g. the visualization's iso_lookup) still
+have a source/target relationship for each removed sign-variant rather
+than only the first one.
+
+Nothing else in this file was changed. build_direct_maps and
+build_indirect_maps are untouched. gaussian.py is untouched.
 """
 
 from src.Computation.TemperleyLieb import kauffmanstates
@@ -71,26 +103,16 @@ def build_direct_maps(
 
 
 # ── Step 2 – Isomorphism pairs ─────────────────────────────────────────────
-
 def build_iso_pairs(
     n: int, k: int
 ) -> tuple[list, set, list, list]:
-    """
-    Run Gaussian cancellation to identify isomorphism pairs.
-
-    Returns:
-      generators : all (state, sign) pairs
-      removed    : set of cancelled (state, sign) pairs
-      survivors  : list of non-cancelled (state, sign) pairs
-      iso_pairs  : list of (A, sA, B, sB) cancellation pairs
-    """
     generators     = build_generators(n, k)
     gen_set        = set(generators)
     signs_by_state: dict[int, list[int]] = {}
     for state, sign in generators:
         signs_by_state.setdefault(state, []).append(sign)
 
-    removed:   set[tuple[int, int]]        = set()
+    removed:   set[tuple[int, int]]            = set()
     iso_pairs: list[tuple[int, int, int, int]] = []
 
     for state, sign in generators:
@@ -98,25 +120,32 @@ def build_iso_pairs(
 
             if source_type == "S1":
                 target = state | (1 << (j + n - 1))
-                if (target, -1) in gen_set:
-                    if (state, sign) not in removed and (target, -1) not in removed:
-                        iso_pairs.append((state, sign, target, -1))
-                        removed.add((state, sign))
-                        removed.add((target, -1))
+                # Remove ALL sign variants of source, matching run_cancellation
+                for s_sign in signs_by_state.get(state, []):
+                    if (state, s_sign) not in removed:
+                        removed.add((state, s_sign))
+                        if (target, -1) in gen_set and (target, -1) not in removed:
+                            iso_pairs.append((state, s_sign, target, -1))
+                            removed.add((target, -1))
 
             elif source_type == "S2" and sign == 1:
                 target = state | (1 << (j + 1))
                 if (state, 1) not in removed:
+                    removed.add((state, 1))
+                    # Remove ALL sign variants of target, matching
+                    # run_cancellation's behavior exactly (no early break).
+                    # Previously this loop broke after the first match,
+                    # which — since build_generators always appends
+                    # (state, 1) before (state, -1) — meant the (-1)
+                    # variant of a circle-bearing target was never
+                    # removed, surviving incorrectly.
                     for g_sign in signs_by_state.get(target, []):
                         if (target, g_sign) not in removed:
                             iso_pairs.append((state, 1, target, g_sign))
-                            removed.add((state, 1))
                             removed.add((target, g_sign))
-                            break
 
     survivors = [(s, sg) for s, sg in generators if (s, sg) not in removed]
     return generators, removed, survivors, iso_pairs
-
 
 # ── Step 3 – Indirect maps ─────────────────────────────────────────────────
 
@@ -170,3 +199,38 @@ def build_indirect_maps(
                             indirect.append((X, signX, Y, signY, A, sA, B, sB))
 
     return indirect
+
+if __name__ == "__main__":
+    n = int(input("Enter n: "))
+    k = int(input("Enter k: "))
+    crossings = k * (n - 1)
+
+    generators, removed, survivors, iso_pairs = build_iso_pairs(n, k)
+    direct, incoming = build_direct_maps(n, k)
+    indirect = build_indirect_maps(iso_pairs, direct, incoming, generators)
+
+    print(f"\nTotal generators : {len(generators)}")
+    print(f"Removed          : {len(removed)}")
+    print(f"Survivors        : {len(survivors)}")
+
+    print("\n--- Survivors ---")
+    for state, sign in survivors:
+        b = state_to_bin(state, crossings)
+        s = {1: "(+)", -1: "(-)", 0: ""}.get(sign, "")
+        print(f"  {b} {s}")
+
+    print(f"\n--- Iso Pairs ({len(iso_pairs)}) ---")
+    for A, sA, B, sB in iso_pairs:
+        a_str = state_to_bin(A, crossings)
+        b_str = state_to_bin(B, crossings)
+        sa = {1: "(+)", -1: "(-)", 0: ""}.get(sA, "")
+        sb = {1: "(+)", -1: "(-)", 0: ""}.get(sB, "")
+        print(f"  {a_str}{sa}  →  {b_str}{sb}")
+
+    print(f"\n--- Indirect Maps ({len(indirect)}) ---")
+    for X, signX, Y, signY, A, sA, B, sB in indirect:
+        x_str = state_to_bin(X, crossings)
+        y_str = state_to_bin(Y, crossings)
+        sx = {1: "(+)", -1: "(-)", 0: ""}.get(signX, "")
+        sy = {1: "(+)", -1: "(-)", 0: ""}.get(signY, "")
+        print(f"  {x_str}{sx}  ~~>  {y_str}{sy}")
