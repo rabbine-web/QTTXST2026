@@ -195,25 +195,32 @@ def kauffman_indirect_maps(
         while states:
     
             ## Find all targets in next hom degree which are reachable by direct maps
-            new_states = []
+            reachable_targets = []
             for state in states:
-                new_states.extend(find_direct_targets(state, numStrands))
-            states = new_states
+                reachable_targets.extend(find_direct_targets(state, numStrands))
+
+            ## remove previously visited targets here
 
             ## Follow the isomorphisms back to source states
-            new_states = [
-                backtrack_isomorphism(state, isomorphism_type, index)[0] 
-                    for state, isomorphism_type, index in states
+            states = [
+                backtrack_isomorphism(target, 
+                                      isomorphism_type, 
+                                      index)
+                    for target, isomorphism_type, index in reachable_targets
             ]
-            states = new_states
 
             ## Remove and log any states which form indirect maps
             directs = []
             for next_state in kauff_states_by_degree[i+1]:
-                states = []
+                directs.extend(
+                    [(state, next_state) for state in states if exists_direct_map(state, next_state)]
+                )
+            indirect_maps.extend(directs)
+            for state,_ in directs:
+                states.remove(state)
 
 
-    return []
+    return indirect_maps
 
 """
 For a given Kauffman state, find all targets which can be reached by a direct map
@@ -236,7 +243,7 @@ def find_direct_targets(
         - eliminate patterns which cannot lead to distinguished targets
     """
 
-    pass
+    return []
 
 """
 Detects if the given state has a distinguished isomorphism.
@@ -251,8 +258,7 @@ def detect_distinguished_target(
     numStrands: int
 ) -> tuple[int, int]:
 
-    pass
-
+    return (-1,-1)
 """
 Given an isomorphism type and an index, backtrack the isomorphism to find the source state.
 Returns the ismorphism source state, preserving the length of the string.
