@@ -56,7 +56,8 @@ def find_direct_targets(
         for temp_state in possible_states:
             string_state = f"{temp_state:b}"
             detected = detect_distinguished_target(string_state, numStrands)
-            direct_targets.append((string_state, detected[0], detected[1]))
+            if detected[0] != 0:
+                direct_targets.append((string_state, detected[0], detected[1]))
             
     return direct_targets
 
