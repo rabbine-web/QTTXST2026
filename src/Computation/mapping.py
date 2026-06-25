@@ -276,16 +276,14 @@ def getSignForClosedComponent(state, importantIndex):
 
 #finds all isomorphisms by checking signs and types to correctly match states
 def findIsomorphisms(directMaps, n, k):
+
     isomorphisms = {}
+    isoTypes = {}
     matchedStates = set()
 
     sources = list(directMaps.keys())
 
-    sources.sort(key=lambda state: (
-        undecorateState(state).count("1"),
-        undecorateState(state),
-        splitState(state)[1]
-    ))
+    sources.sort(key=lambda state: (undecorateState(state).count("1"),undecorateState(state), splitState(state)[1]))
 
     for source in sources:
 
@@ -297,22 +295,52 @@ def findIsomorphisms(directMaps, n, k):
         sourceType = 0
         startIndex = -1
         importantIndex = -1
+        windowLength = 0
 
-        for i in range(len(binarySource) - 2):
-            subWord = binarySource[i:i+3]
-            startSigma = i % (n - 1) + 1
+        for i in range(len(binarySource)):
+            if i <= len(binarySource)-5:
+                subWord5 = binarySource[i:i+5]
+                if subWord5 == "01010":
+                    importantIndexCanidate = i + 2
+                    sign = getSignForClosedComponent(source,importantIndexCanidate)
 
-            if subWord == "100":
-                sourceType = 1
-                startIndex = i
-                importantIndex = i + 2
-                break
+                    if sign == "+":
+                        sourceType = 3
+                        startIndex = i
+                        importantIndex = importantIndexCanidate
+                        windowLength = 5
+                        break
+            
+            if i == len(binarySource) - 4:
+                subWord4 = binarySource[i:i+4]
+                if(subWord4 == "0101"):
+                    importantIndexCanidate = i + 2
+                    sign = getSignForClosedComponent(source, importantIndexCanidate)
 
-            if subWord == "101" and startSigma <= n - 2:
-                sourceType = 2
-                startIndex = i
-                importantIndex = i + 1
-                break
+                    if sign == "+":
+                        sourceType = 3
+                        startIndex = i
+                        importantIndex = importantIndexCanidate
+                        windowLength = 4
+                        break
+            
+            if i <= len(binarySource)-3:
+                subWord3 = binarySource[i:i+3]
+                startSigma = i % (n - 1) + 1
+
+                if subWord3 == "100":
+                    sourceType = 1
+                    startIndex = i
+                    importantIndex = i + 2
+                    windowLength = 3
+                    break
+
+                if subWord3 == "101" and startSigma <= n - 2:
+                    sourceType = 2
+                    startIndex = i
+                    importantIndex = i + 1
+                    windowLength = 3
+                    break
 
         if sourceType == 0:
             continue
@@ -332,30 +360,40 @@ def findIsomorphisms(directMaps, n, k):
 
             binaryTarget = undecorateState(target)
 
-            expectedTarget = (
-                binarySource[:importantIndex]
-                + "1"
-                + binarySource[importantIndex + 1:]
-            )
+            expectedTarget = ( binarySource[:importantIndex]+ "1" + binarySource[importantIndex + 1:])
 
             if binaryTarget != expectedTarget:
                 continue
 
-            targetSubWord = binaryTarget[startIndex:startIndex+3]
-
-            if sourceType == 1 and targetSubWord != "101":
-                continue
-
-            if sourceType == 2 and targetSubWord != "111":
-                continue
-
             targetMatrix = generateMatrix(n, k, binaryTarget)
 
-            if sourceType == 1 and not checkType1Target(targetMatrix):
-                continue
+            if sourceType == 1:
+                targetSubWord = binaryTarget[startIndex:startIndex+3] 
+                if targetSubWord != "101":
+                    continue  
 
-            if sourceType == 2 and not checkType2Target(targetMatrix):
-                continue
+                if not checkType1Target(targetMatrix):
+                    continue 
+            
+            if sourceType == 2:
+                targetSubWord = binaryTarget[startIndex:startIndex+3] 
+                if targetSubWord != "111":
+                    continue  
+
+                if not checkType2Target(targetMatrix):
+                    continue 
+            
+            if sourceType == 3:
+                if windowLength == 5:
+                    targetSubWord = binaryTarget[startIndex:startIndex+5]
+                    if targetSubWord != "01110":
+                        continue
+
+                if windowLength == 4:
+                    targetSubWord = binaryTarget[startIndex:startIndex+4]
+                    if targetSubWord != "0111":
+                        continue
+             
 
             sourceBinary, sourceSigns = splitState(source)
             targetBinary, targetSigns = splitState(target)
@@ -411,18 +449,26 @@ def findIsomorphisms(directMaps, n, k):
 
                 if sign != "+":
                     continue
+            
+            if sourceType == 3:
+                sign = getSignForClosedComponent(source, importantIndex)
+
+                if sign != "+":
+                    continue
 
             if source not in isomorphisms:
                 isomorphisms[source] = []
 
             isomorphisms[source].append(target)
+            isoTypes[(source, target)] = sourceType
 
             matchedStates.add(source)
             matchedStates.add(target)
 
             break
 
-    return isomorphisms
+    return isomorphisms, isoTypes
+
 #builds a dictionary that has all isomorphic pairs
 def buildIsoPairs(isomorphisms):
     isoPairs = {}
@@ -450,6 +496,43 @@ def whittleStates(directMaps, isomorphisms):
             whittled.add(state)
 
     return whittled
+
+def isSubsequence(small,big):
+    i = 0
+
+    for ch in big: 
+        if i < len(small) and small[i] == ch:
+            i += 1
+    return i == len(small)
+
+def signsPreserved(source,target):
+    sourceBinary, sourceSigns = splitState(source)
+    targetBinary, targetSigns = splitState(target)
+
+    sourceClosed = findClosedComponents(sourceBinary)
+    targetClosed = findClosedComponents(targetBinary)
+
+    for i in range(len(sourceClosed)):
+        component = sourceClosed[i]
+
+        if component in targetClosed:
+            j = targetClosed.index(component)
+            
+            if i < len(sourceSigns) and j < len(targetSigns):
+                if sourceSigns[i] != targetSigns[j]:
+                    return False
+
+    if len(sourceSigns) == len(targetSigns):
+        return sourceSigns == targetSigns
+    
+    if len(sourceSigns) < len(targetSigns):
+        return isSubsequence(sourceSigns,targetSigns)
+    
+    if len(sourceSigns) > len(targetSigns):
+        return isSubsequence(targetSigns,sourceSigns)
+    
+    return True
+
 
 #finds all indirect maps by starting with a whittled state, searching though the direct maps chaining through isomorphism,
 # to find a valid map to a next whittled state
@@ -486,6 +569,9 @@ def findIndirectMaps(directMaps, isomorphisms, whittled):
                 continue
 
             for nextTarget, nextGenerator, nextPosition in directMaps.get(current, []):
+                
+                if not signsPreserved(current,nextTarget):
+                    continue
 
                 nextDegree = undecorateState(nextTarget).count("1")
 
@@ -546,13 +632,14 @@ def printWhittledStates(whittled):
     for state in sorted(whittled):
         print(state,wordString(state))
 
-def printIsomorphisms(isomorphisms):
+def printIsomorphisms(isomorphisms, isoTypes):
     print("\nIsomorphic pairs:")
     for source in isomorphisms: 
         for target in isomorphisms[source]:
             sourceWord = wordString(source)
             targetWord = wordString(target)
-            print(source, sourceWord, "is isomorphic to", target, targetWord)            
+            isoType = isoTypes[(source,target)]
+            print(source, sourceWord, "is a type", isoType, "isomorphism with", target, targetWord)            
 
 def printWhittledDirectMaps(directMaps, whittled):
     whittled = whittleStates(directMaps, isomorphisms)
@@ -588,16 +675,14 @@ def printIndirectMaps(indirectMaps):
             print("path:", " -> ".join(path))
             print()
 
-def printData(whittled,directMaps, isomorphisms, indirectMaps):
+def printData(whittled,directMaps, isomorphisms, indirectMaps, isoType):
     printWhittledStates(whittled)
 
-    printIsomorphisms(isomorphisms)
+    printIsomorphisms(isomorphisms,isoTypes)
 
     printWhittledDirectMaps(directMaps, isomorphisms)
 
     printIndirectMaps(indirectMaps)
-
-
 
 n = int(input("Enter the number of Strands "))
 k = int(input("Enter the number of Repitions "))
@@ -614,12 +699,11 @@ temperlyLeibWords = [[] for i in range((k*n-1))]
 generateHomdegrees(states,homDegrees,indexes,temperlyLeibWords)
 
 directMaps = findDirectMaps(homDegrees,indexes,temperlyLeibWords)
-isomorphisms = findIsomorphisms(directMaps,n,k)
+isomorphisms, isoTypes = findIsomorphisms(directMaps,n,k)
 
 buildIsoPairs(isomorphisms)
     
 whittledStates = whittleStates(directMaps,isomorphisms)
 indirectMaps = findIndirectMaps(directMaps,isomorphisms,whittledStates)
 
-printData(whittledStates,directMaps,isomorphisms,indirectMaps)
-
+printData(whittledStates,directMaps,isomorphisms,indirectMaps,isoTypes)
