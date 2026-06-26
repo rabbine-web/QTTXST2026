@@ -1,4 +1,11 @@
 from itertools import product
+from typing import Optional
+
+DirectMaps = dict[str, list[tuple[str, str, int]]]
+Isomorphisms = dict[str, list[str]]
+IsoTypes = dict[tuple[str, str], int]
+IndirectMaps = dict[str, list[tuple[str, str, int, list[str]]]]
+
 #Input: n is the number of strands and k is the number of repetitions
 #Logic: creates a list of all kauffmamn states by iterating through 0 to 2^((n-1) * k) and formatting them to have 
 #       the correct length and format
@@ -13,7 +20,7 @@ def generate_Kauffman_States(n,k):
 #Logic: Creates a list of a list for a state by taking a window of 2 or 3 depending on a 3 or 4 braid and 
 #       stacks them on top of each other where each column is a generator and each row is a repetition
 #Output: returns the matrix for the state
-def generateMatrix(n,k,s):
+def generateMatrix(n: int, k: int, s: str) -> list[list[str]]:
     state = [list(s[i:i + n - 1]) for i in range(0, len(s), n-1)]
     return state
 
@@ -23,7 +30,7 @@ def generateMatrix(n,k,s):
 #       cell is. We then check the right neighbor of the first 1 and the left neighbor of the cell. Based on this format 
 #       we just need to check what the neighbors are to find each type. Checks for types in the form of 10...w...01 for example
 #Output: Returns true if the check for a certain type is passed, false otherwise
-def checkType1Source(state):
+def checkType1Source(state: list[list[str]]) -> bool:
     #print("Test",len(state[0])-1)
     for r in range(len(state) - 1):
         for c in range(len(state[r])):
@@ -44,7 +51,7 @@ def checkType1Source(state):
                     return True
     return False
 
-def checkType1Target(state):
+def checkType1Target(state: list[list[str]]) -> bool:
     for r in range(len(state) - 1):
         for c in range(len(state[r])):
             if state[r][c] == '1' and state[r+1][c] == '1': 
@@ -61,7 +68,7 @@ def checkType1Target(state):
                     return True
     return False
 
-def checkType2Source(state):
+def checkType2Source(state: list[list[str]]) -> bool:
     for r in range(len(state) - 1):
         for c in range(len(state[r])-1):
             if state[r][c] == '1' and state[r+1][c] == '1': 
@@ -78,7 +85,7 @@ def checkType2Source(state):
                     return True
     return False
 
-def checkType2Target(state):
+def checkType2Target(state: list[list[str]]) -> bool:
     for r in range(len(state) - 1):
         for c in range(len(state[r])-1):
             if state[r][c] == '1' and state[r+1][c] == '1': 
@@ -99,7 +106,7 @@ def checkType2Target(state):
 #Input: state is a kauffman state
 #Logic: Iterates through the kauffman state by character and records the position of each 1
 #Output: Returns a list of integers 
-def findIndexes(state):
+def findIndexes(state: str) -> list[int]:
     indexes = []
     for i in range(len(state)):
         if(state[i] == "1"):
@@ -110,7 +117,7 @@ def findIndexes(state):
 #Logic: iterates through the kauffman state by character and when a 1 is found we append e + i%2 + 1 to give us the generator corresponding
 #       to the position the 1 was found in
 #Output: returns a list of strings corresponding to a temperlyleib word
-def generateTemperlyLeib(state):
+def generateTemperlyLeib(state: str) -> list[str]:
     word = []
     for i in range(len(state)):
         if state[i] == '1':
@@ -122,7 +129,7 @@ def generateTemperlyLeib(state):
 #       based on the count of ones we append each of those to the corresponding list of list sorting them all by homological degree
 #Output: homDegrees is the states sorted by homological degree, indexes is parallel to the state and records the positions of ones and same for
 #        temperly leib words
-def generateHomdegrees(states,homDegrees,indexes,temperlyLeibWords):
+def generateHomdegrees(states: list[str], homDegrees: list[list[str]], indexes: list[list[list[int]]], temperlyLeibWords: list[list[list[str]]]) -> None:
     for state in states:
         
         binaryState = undecorateState(state)
@@ -138,7 +145,7 @@ def generateHomdegrees(states,homDegrees,indexes,temperlyLeibWords):
 #Input: Source is a temperly leib word corresponding to a source in a map, target is a temperly leib word corresponding to a target in a map
 #Logic: iterates through both words one character at a time until a difference is found
 #Output: returns the index that the different character was found and what that character was such as e1 or e2
-def describeMap(source,target):
+def describeMap(source: list[str], target: list[str]) -> tuple[str, int]:
     i = 0
     while i < len(source):
         if(source[i] == target[i]):
@@ -152,7 +159,7 @@ def describeMap(source,target):
 #       of the second state. If so we describe the map and adds it to our directMap dictionary, otherwise there is no direct map. 
 #Output: returns a dictionary where the key is a state and the value is a tuple with the target state, generator added and the postion that 
 #        generator is added 
-def findDirectMaps(homDegrees,indexes,temperlyLeibWords):
+def findDirectMaps(homDegrees: list[list[str]], indexes: list[list[list[int]]], temperlyLeibWords: list[list[list[str]]]) -> DirectMaps:
     directMaps = {}
     for i in range(len(homDegrees) - 1):
             
@@ -178,7 +185,7 @@ def findDirectMaps(homDegrees,indexes,temperlyLeibWords):
 #Logic: since states are decorated with signs such as - + for the closed componenets, we want to separate them into two parts
 #       so we iterate through the string in characters and add them to two separate strings, one is just the binary state, the other is a string of the signs
 #Output: binary is a string of the binary part of a kauffman state, signs is a string of the signs for the closed components of a kauffman state
-def splitState(state):
+def splitState(state: str) -> tuple[str, str]:
     binary = ""
     signs = ""
 
@@ -192,14 +199,15 @@ def splitState(state):
 #Input: state is a decorated kauffman state
 #Logic: we want to extract only the binary part of a decorated kauffman state 
 #Output: returns the binary string for a decorated kauffman state to do computations on only binary string
-def undecorateState(state):
+def undecorateState(state: str) -> str:
     binary, strings = splitState(state)
     return binary
 
 #Input: state is a decorated kauffman state
 #Logic: finds closed components in a 3 braid by checking for 101, or 10..01 with any number of consecutive zeros
 #       when the ones are in the same sigma i givins us a loop 
-def findClosedComponents(state):
+#Output: returns a list of ranges which are the locations of closed loops in the state
+def findClosedComponents(state: str) -> list[tuple[int, int]]:
     state = undecorateState(state)
 
     closedComponents = []
@@ -221,8 +229,10 @@ def findClosedComponents(state):
 
     return closedComponents
 
-#based on the number of closed loops add + and - to the state
-def decorateState(state):
+#Input: state is a decorated or undecorated Kauffman state
+#Logic: finds the closed components, then creates all possible sign decorations using + and - for each component
+#Output: returns a list of decorated versions of the state
+def decorateState(state: str) -> list[str]:
     state = undecorateState(state)
 
     closedComponents = findClosedComponents(state)
@@ -237,31 +247,19 @@ def decorateState(state):
         decoratedStates.append(state + "".join(signs))
     return decoratedStates
 
-#decorates all states 
-def decorateStates(states):
+#Input: states is a list of Kauffman states
+#Logic: decorates each state based on its closed components and combines all decorated states into one list
+#Output: returns the full list of decorated states
+def decorateStates(states: list[str]) -> list[str]:
     decorated = []
     for state in states:
         decorated.extend(decorateState(state))
     return decorated
 
-                    
-#takes a state, performs a sliding 3 window to find 100 or 101 for type 1 and type 2 source, 
-# returns the index that is flipped that will correspond to the isomorphism
-def findImportantIndex(state,n):
-    state = undecorateState(state)
-    for i in range(len(state)-2):
-
-        subWord = state[i:i+3]
-
-        if(subWord == "100"):
-            return (i + 2)
-        
-        if(subWord == "101" and (i % 2 + 1) <= n - 2):
-            return i + 1
-    return (-1)
-
-#finds which closed component corresponds to the important index and returns the sign
-def getSignForClosedComponent(state, importantIndex):
+#Input: state is a decorated Kauffman state, importantIndex is a binary index inside the state
+#Logic: finds which closed component contains importantIndex and returns the corresponding sign from the decoration string
+#Output: returns "+", "-", or None if no closed component contains the index
+def getSignForClosedComponent(state: str, importantIndex: int) -> Optional[str]:
     binaryState, signs = splitState(state)
     closedComponents = findClosedComponents(binaryState)
 
@@ -274,8 +272,11 @@ def getSignForClosedComponent(state, importantIndex):
 
     return None
 
-#finds all isomorphisms by checking signs and types to correctly match states
-def findIsomorphisms(directMaps, n, k):
+#Input: directMaps is the dictionary of direct maps, n is the number of strands, k is the number of repetitions
+#Logic: scans each source for the leftmost Type 3, Type 1, or Type 2 source pattern, checks the expected target,
+#       checks the required signs, preserves signs, and prevents a state from being paired twice
+#Output: returns the isomorphism dictionary and a parallel dictionary recording the isomorphism type for each pair
+def findIsomorphisms(directMaps: DirectMaps, n: int, k: int) -> tuple[Isomorphisms, IsoTypes]:
 
     isomorphisms = {}
     isoTypes = {}
@@ -469,8 +470,10 @@ def findIsomorphisms(directMaps, n, k):
 
     return isomorphisms, isoTypes
 
-#builds a dictionary that has all isomorphic pairs
-def buildIsoPairs(isomorphisms):
+#Input: isomorphisms is the dictionary of source states paired with target states
+#Logic: builds a two-way lookup so either state in an isomorphism pair can find its partner
+#Output: returns a dictionary where each state in a pair points to its paired state
+def buildIsoPairs(isomorphisms: Isomorphisms) -> dict[str, str]:
     isoPairs = {}
     for source in isomorphisms:
         for target in isomorphisms[source]:
@@ -478,8 +481,10 @@ def buildIsoPairs(isomorphisms):
             isoPairs[target] = source
     return isoPairs
 
-#takes all states and whittles them based on if they are apart of an isomorphic pair
-def whittleStates(directMaps, isomorphisms):
+#Input: directMaps is the dictionary of all direct maps and isomorphisms is the dictionary of paired states
+#Logic: collects every state appearing in the direct maps, then removes every state that belongs to an isomorphism pair
+#Output: returns the set of states that survive after whittling
+def whittleStates(directMaps: DirectMaps, isomorphisms: Isomorphisms) -> set[str]:
     isoPairs = buildIsoPairs(isomorphisms)
 
     allStates = set()
@@ -497,7 +502,10 @@ def whittleStates(directMaps, isomorphisms):
 
     return whittled
 
-def isSubsequence(small,big):
+#Input: small and big are strings of signs
+#Logic: checks whether the characters of small appear in big in the same order, not necessarily consecutively
+#Output: returns True if small is a subsequence of big, false otherwise
+def isSubsequence(small: str, big: str) -> bool:
     i = 0
 
     for ch in big: 
@@ -505,7 +513,10 @@ def isSubsequence(small,big):
             i += 1
     return i == len(small)
 
-def signsPreserved(source,target):
+#Input: source and target are decorated Kauffman states
+#Logic: checks that any closed component appearing in both states keeps the same sign and that surviving signs appear in order
+#Output: returns True if the decorations are compatible with a valid direct step, false otherwise
+def signsPreserved(source: str, target: str) -> bool:
     sourceBinary, sourceSigns = splitState(source)
     targetBinary, targetSigns = splitState(target)
 
@@ -534,10 +545,19 @@ def signsPreserved(source,target):
     return True
 
 
-#finds all indirect maps by starting with a whittled state, searching though the direct maps chaining through isomorphism,
-# to find a valid map to a next whittled state
-# currently works for a single zigzag
-def findIndirectMaps(directMaps, isomorphisms, whittled):
+#Input: directMaps is the dictionary of all direct maps, isomorphisms is the dictionary of isomorphic pairs,
+#       and whittled is the set of states that survive after whittling
+#Logic: Builds an oriented dictionary called isoBackward so that if source is isomorphic to target, then target points
+#       back to source. Then for each whittled state, we follow its direct maps. If a direct map lands in another whittled
+#       state, we ignore it because that is already a surviving direct map. If a direct map lands in an isomorphism target,
+#       we jump backward to the isomorphism source and continue following direct maps. This allows paths to zigzag through
+#       multiple isomorphism pairs. At each direct step, we check that signs are preserved, the path stays in the correct
+#       homological degrees, and no state repeats in the same path. Once we reach a whittled target after at least one
+#       isomorphism jump, we record it as an indirect map unless the original source already maps directly to that target
+#       or we already found that target from the same source.
+#Output: returns a dictionary where each key is a whittled source state and each value is a list of tuples containing
+#        the whittled target state, the inserted generator, the insertion position, and the full zigzag path
+def findIndirectMaps(directMaps: DirectMaps, isomorphisms: Isomorphisms, whittled: set[str]) -> IndirectMaps:
     isoBackward = {}
 
     for source in isomorphisms:
@@ -622,17 +642,19 @@ def findIndirectMaps(directMaps, isomorphisms, whittled):
 
     return indirectMaps
 
-#ALl of these are for printing data
-def wordString(state):
+#Input: state is a decorated or undecorated Kauffman state
+#Logic: generates the Temperley-Lieb word for the binary part and joins it into one string
+#Output: returns the Temperley-Lieb word as a string
+def wordString(state: str) -> str:
     word = generateTemperlyLeib(undecorateState(state))
     return "".join(word)
 
-def printWhittledStates(whittled):
+def printWhittledStates(whittled: set[str]) -> None:
     print("\nWhittled States:")
     for state in sorted(whittled):
         print(state,wordString(state))
 
-def printIsomorphisms(isomorphisms, isoTypes):
+def printIsomorphisms(isomorphisms: Isomorphisms, isoTypes: IsoTypes) -> None:
     print("\nIsomorphic pairs:")
     for source in isomorphisms: 
         for target in isomorphisms[source]:
@@ -641,7 +663,7 @@ def printIsomorphisms(isomorphisms, isoTypes):
             isoType = isoTypes[(source,target)]
             print(source, sourceWord, "is a type", isoType, "isomorphism with", target, targetWord)            
 
-def printWhittledDirectMaps(directMaps, whittled):
+def printWhittledDirectMaps(directMaps: DirectMaps, whittled: set[str]) -> None:
     whittled = whittleStates(directMaps, isomorphisms)
 
     print("\nWhittled direct maps:")
@@ -660,7 +682,7 @@ def printWhittledDirectMaps(directMaps, whittled):
             print(source , sourceWord , "maps directly to" , target , targetWord , "by inserting"
                 , generator , "at position" , position)
 
-def printIndirectMaps(indirectMaps):
+def printIndirectMaps(indirectMaps: IndirectMaps) -> None:
     print("\nIndirect maps:")
 
     for source in sorted(indirectMaps):
@@ -675,10 +697,10 @@ def printIndirectMaps(indirectMaps):
             print("path:", " -> ".join(path))
             print()
 
-def printData(whittled,directMaps, isomorphisms, indirectMaps, isoType):
+def printData(whittled: set[str], directMaps: DirectMaps, isomorphisms: Isomorphisms, indirectMaps: IndirectMaps, isoTypes: IsoTypes) -> None:
     printWhittledStates(whittled)
 
-    printIsomorphisms(isomorphisms,isoTypes)
+    #printIsomorphisms(isomorphisms,isoTypes)
 
     printWhittledDirectMaps(directMaps, isomorphisms)
 
@@ -688,22 +710,23 @@ n = int(input("Enter the number of Strands "))
 k = int(input("Enter the number of Repitions "))
 
 temp = input("Do you wish to proceed ")
-tempStates = generate_Kauffman_States(n,k)
 
-states = decorateStates(tempStates)
+if(temp == "yes" or temp == "Yes"):
+    tempStates = generate_Kauffman_States(n,k)
+    states = decorateStates(tempStates)
 
-homDegrees = [[] for i in range((k*n-1))]
-indexes = [[] for i in range((k*n-1))]
-temperlyLeibWords = [[] for i in range((k*n-1))]
+    homDegrees = [[] for i in range((k*n-1))]
+    indexes = [[] for i in range((k*n-1))]
+    temperlyLeibWords = [[] for i in range((k*n-1))]
 
-generateHomdegrees(states,homDegrees,indexes,temperlyLeibWords)
+    generateHomdegrees(states,homDegrees,indexes,temperlyLeibWords)
 
-directMaps = findDirectMaps(homDegrees,indexes,temperlyLeibWords)
-isomorphisms, isoTypes = findIsomorphisms(directMaps,n,k)
+    directMaps = findDirectMaps(homDegrees,indexes,temperlyLeibWords)
+    isomorphisms, isoTypes = findIsomorphisms(directMaps,n,k)
 
-buildIsoPairs(isomorphisms)
-    
-whittledStates = whittleStates(directMaps,isomorphisms)
-indirectMaps = findIndirectMaps(directMaps,isomorphisms,whittledStates)
+    buildIsoPairs(isomorphisms)
 
-printData(whittledStates,directMaps,isomorphisms,indirectMaps,isoTypes)
+    whittledStates = whittleStates(directMaps,isomorphisms)
+    indirectMaps = findIndirectMaps(directMaps,isomorphisms,whittledStates)
+
+    printData(whittledStates,directMaps,isomorphisms,indirectMaps,isoTypes)
