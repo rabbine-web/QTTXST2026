@@ -3,7 +3,8 @@ def kaufman_to_monoid(
     numStrands : int
 )-> list[int]:
 
-    num_repitions = kauf_state
+    if type(kauf_state) is int:
+        kauf_state = str(kauf_state)
     temp_lieb = [] 
 
     index = len(kauf_state) - 1
@@ -16,7 +17,3 @@ def kaufman_to_monoid(
         element = (element - 1) % (numStrands - 1)
         
     return temp_lieb 
-
-
-print(kaufman_to_monoid("1010000", 3))
-

@@ -1,4 +1,4 @@
-from src.Computation.kaufman_to_monoid import kaufman_to_monoid
+from kaufman_to_monoid import kaufman_to_monoid
 
 """
 STANDARD:
@@ -230,7 +230,7 @@ def detect_distinguished_target(state: str, numStrands: int, sign: str = None) -
         if matched:
             return (iso_type, j)
 
-    matched, j = _is_target3(state, numStrands, k)
+    matched, j = _is_target3(state, numStrands)
     if matched:
         return (3, j)
 
