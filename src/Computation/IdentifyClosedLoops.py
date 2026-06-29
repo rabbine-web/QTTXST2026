@@ -1,16 +1,18 @@
-"""
-kauf_state has been modified to become a binary string, str
-"""
-def detect_closed_loops(kauf_state, n, k):
+def detect_closed_loops(
+        kauf_state : int, 
+        n : int, 
+        k : int
+    )->list[int]:
     forward_strands = []
-    num_closed_loops = 0
+    closed_loops = []
     for reptition in range(k):
         for element_index in range(n - 1):
             # affects strands, element_index and element_index + 1
-            has_element = kauf_state[reptition * (n - 1) + element_index]
+            position = (reptition * ( n - 1)) + element_index
+            has_element = kauf_state >> ((n - 1) * k - 1 - position) & 0b1
 
-            if has_element == '1':
-                forward_strands.append([element_index, element_index + 1])
+            if has_element:
+                forward_strands.append([element_index, element_index + 1, position])
                 #print("initially " + str(forward_strands))
                 # only grows the range
                 changed_range = check_connection(forward_strands)
@@ -22,10 +24,12 @@ def detect_closed_loops(kauf_state, n, k):
                         # if contained within another range, then cant
                         break
 
-                    if forward_strands[-1] == forward_strands[i]:
-                        #print("closed loop detected")
-                        num_closed_loops += 1
-                        forward_strands.pop()
+                    if forward_strands[-1][0] == forward_strands[i][0] and forward_strands[-1][1] == forward_strands[i][1] :
+                        #print("closed loop detected 1")
+                        # TODO: understand why this one should be i but not the others?
+                        closed_loops.append((forward_strands.pop(i)[2], position))
+
+                        
                 
                 # if the element could connect to an exisiting range, check if it creates a closed loop or can connect to another range to merge
                 while changed_range:
@@ -36,11 +40,10 @@ def detect_closed_loops(kauf_state, n, k):
                             # if contained within another range, then cant
                             break
 
-                        if forward_strands[-1] == forward_strands[i]:
-                            #print("closed loop detected")
-                            num_closed_loops += 1
-                            forward_strands.pop()
-                
+                        if forward_strands[-1][0] == forward_strands[i][0] and forward_strands[-1][1] == forward_strands[i][1] :
+                            #print("closed loop detected 2")
+                            closed_loops.append((forward_strands.pop(i)[2], position))
+
                     # get potentially merged range index, if -1 then no merge
                     changed_range = check_connection(forward_strands)
                     merged += 1
@@ -49,12 +52,10 @@ def detect_closed_loops(kauf_state, n, k):
 
                 # if there's not 2 forward facing ends, then it's impossible to loop since we need 2 forward facing ends to connect to each other
                 if(forward_strands[-1][0] == forward_strands[-1][1]):
-                    #print("closed loop detected")
-                    num_closed_loops += 1
-                    forward_strands.pop()
-                    forward_strands.append([element_index, element_index + 1])
+                    #print("closed loop detected 3")
+                    closed_loops.append((forward_strands.pop()[2], position))
+                    forward_strands.append([element_index, element_index + 1, position])
 
-                # sometimes canceling will only merge once, no need to pop again
                 elif merged == 1:
                     #print("merged backwards, impossible to loop")
                     forward_strands.pop()
@@ -64,7 +65,7 @@ def detect_closed_loops(kauf_state, n, k):
                     # TODO: need to properly split the range depending on order, like [0,3] when canceled [0,3] by a merge of [1,2] splits into [0,1] and [2,3]
                     # or when canceled [0,3] by a merge of [0, 1] splits into [1,3]
  
-                    forward_strands.append([element_index, element_index + 1])
+                    forward_strands.append([element_index, element_index + 1, position])
                 #print("ends up " + str(forward_strands))
                 #print()
 
@@ -72,7 +73,7 @@ def detect_closed_loops(kauf_state, n, k):
     
     #print("leftover forward_strands: " + str(forward_strands))
 
-    return num_closed_loops
+    return closed_loops
 
 """
 After updating the range of a loop, check if it can connect to another loop. 
@@ -111,16 +112,26 @@ def check_connection(forward_strands):
                 forward_strands[changed_range][0] = forward_strands[other_range][0]
         else:
             return False
-        forward_strands.remove(forward_strands[other_range])
+        
+        forward_strands[-1][2] = forward_strands.pop(other_range)[2]
         return True
         
     return False
 
-    """
-if __name__ == "__main__":
 
-    kauf_state = "101010010010101"
+
+if __name__ == "__main__":
+    """
+    kauf_state = 0b101010011100
     n = 4
     k = 5
-    print(detect_closed_loops(kauf_state, n , k))
     """
+    
+    # kauf_state = 0b101001100
+    # n = 4
+    # k = 3
+
+    kauf_state = 0b101010010010001100
+    n = 4
+    k = 6
+    #print(detect_closed_loops(kauf_state, n, k))
