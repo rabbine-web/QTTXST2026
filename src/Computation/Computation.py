@@ -9,6 +9,9 @@ KAUFFMAN STATES:
     - strings of ones and zeroes
     - padding can be truncated or included
 
+    SIGN INFORMATION OF KAUFFMAN STATES:
+        - for each closed loop, there should be an ordered pair (s,e) of indices
+        - the indicies are where the clsoed loop begins and ends in the kauffman state
 """
 
 
@@ -187,6 +190,17 @@ def kauffman_indirect_maps(
     """
 
     return []
+
+
+"""
+Given a kauffman state, returns an ordered pair for each closed loop, with indicies 
+bounding where the loop occurs in the state 
+"""
+def find_closed_loops(
+    state: str,
+    numStrands: int
+) -> list[tuple[int, int]]:
+    pass
 
 """
 For a given state, find all targets which can be reached by a direct map
