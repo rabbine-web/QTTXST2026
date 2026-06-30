@@ -232,7 +232,7 @@ def find_closed_loops(
 
                     if forward_strands[-1][0] == forward_strands[i][0] and forward_strands[-1][1] == forward_strands[i][1] :
                         #print("closed loop detected 1")
-                        closed_loops.append([forward_strands.pop(i)[2], string_position])
+                        closed_loops.append((string_position, forward_strands.pop(i)[2]))
                 
                 # if the element could connect to an exisiting range, check if it creates a closed loop or can connect to another range to merge
                 while range_was_changed:
@@ -244,7 +244,7 @@ def find_closed_loops(
 
                         if forward_strands[-1][0] == forward_strands[i][0] and forward_strands[-1][1] == forward_strands[i][1] :
                             #print("closed loop detected 2")
-                            closed_loops.append([forward_strands.pop(i)[2], string_position])
+                            closed_loops.append((string_position, forward_strands.pop(i)[2]))
 
                     # get potentially merged range index, if -1 then no merge
                     range_was_changed = merge_ranges(forward_strands)
@@ -255,7 +255,7 @@ def find_closed_loops(
                 # if there's not 2 forward facing ends, then it's impossible to loop since we need 2 forward facing ends to connect to each other
                 if(forward_strands[-1][0] == forward_strands[-1][1]):
                     #print("closed loop detected 3")
-                    closed_loops.append([forward_strands.pop()[2], string_position])
+                    closed_loops.append((string_position, forward_strands.pop()[2]))
                     forward_strands.append([element_index, element_index + 1, string_position])
 
                 # if it only merged once, then that means one strand points back
@@ -365,8 +365,8 @@ def backtrack_isomorphism(
 
 
 
-if __name__ == "__main__":
+# if __name__ == "__main__":
 
-    state = "10100"
-    numStrands = 3
-    print(find_closed_loops(state, numStrands))
+#     state = "11000100000"
+#     numStrands = 3
+#     print(find_closed_loops(state, numStrands))
