@@ -209,7 +209,19 @@ def find_direct_targets(
         - eliminate patterns which cannot lead to distinguished targets
     """
 
-    pass
+    max_length = int(state, 2).bit_length() + numStrands
+
+    direct_targets = []
+
+    for i in range(max_length):
+
+        if state[i] == '0':
+            candidate_state = change_resolution(state, i)
+            isomorphism_type, bit_index = detect_distinguished_target(candidate_state, numStrands)
+            if isomorphism_type != 0:
+                direct_targets.append((candidate_state, isomorphism_type, bit_index))
+        
+    return direct_targets
 
 """
 Detects if the given state has a distinguished isomorphism.
