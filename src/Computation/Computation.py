@@ -1,5 +1,11 @@
+type Kauff = str
+type TL = list[int]
+type Loop = tuple[tuple[int, int], str]
+type State = tuple[Kauff, list[Loop]]
+
 """
-STANDARD:
+STATE:
+    a pair (Kauffman, sign information)
 
 TEMPERLEY-LIEB WORDS:
     - lists of integers from 1 to n-1
@@ -165,22 +171,11 @@ where (A, B) is returned iff there is an indirect map from A to B.
 There needs to be an extension of this function which returns the path an indirect map takes.
 """
 def kauffman_indirect_maps(
-    kauff_states_by_degree: list[list[str]],
+    states_by_degree: list[list[State]],
     numStrands: int
 ) -> list[tuple[str, str]]:
 
     """
-    for each hom degree:
-        for each state:
-            find_direct_targets
-            for each target:
-                backtrack_isomorphism to source
-                for each source:
-                    check for direct maps to next hom degree
-                    check for direct maps to NEW targets
-                        for each NEW target:
-                            check for direct maps to next hom degree
-
     Optimization:
         - eliminate isomorphism types which can occur in indirect sequence
         - limit the max possible length of an indirectpath
@@ -188,37 +183,50 @@ def kauffman_indirect_maps(
 
     indirect_maps = []
 
-    for i in range(len(kauff_states_by_degree)-1):
+    for i in range(len(states_by_degree)-1):
 
-        states = kauff_states_by_degree[i]
+        """
+        kauffman = kauff_states_by_degree[i]
+        states = []
 
-        while states:
-    
-            ## Find all targets in next hom degree which are reachable by direct maps
-            reachable_targets = []
-            for state in states:
-                reachable_targets.extend(find_direct_targets(state, numStrands))
+        for kauff in kauffman:
+            loops = closed_loops(kauff, numStrands)
 
-            ## remove previously visited targets here
+            sign_info = [(loop, "+") for loop in loops]
 
-            ## Follow the isomorphisms back to source states
-            states = [
-                backtrack_isomorphism(target, 
-                                      isomorphism_type, 
-                                      index)
-                    for target, isomorphism_type, index in reachable_targets
-            ]
+            states.append(
+                (kauff, sign_info)
+            )
+        """
 
-            ## Remove and log any states which form indirect maps
-            directs = []
-            for next_state in kauff_states_by_degree[i+1]:
-                directs.extend(
-                    [(state, next_state) for state in states if exists_direct_map(state, next_state)]
-                )
-            indirect_maps.extend(directs)
-            for state,_ in directs:
-                states.remove(state)
+        for survivor in states_by_degree[i]:
 
+            states = [survivor]
+
+            while states:
+        
+                ## Find all targets in next hom degree which are reachable by direct maps
+                reachable_targets = []
+                for state in states:
+                    reachable_targets.extend(find_direct_targets(state, numStrands))
+
+                ## remove previously visited targets here
+                ## NEEDS MORE THINKING
+
+                ## Follow the isomorphisms back to source states
+                states = [
+                    backtrack_isomorphism(target, 
+                                        isomorphism_type, 
+                                        index)
+                        for target, isomorphism_type, index in reachable_targets
+                ]
+
+                ## Remove and log any states which form indirect maps
+                for next_survivor in states_by_degree[i+1]:
+                    for state in states:
+                        if exists_direct_map(state, next_survivor):
+                            indirect_maps.append((survivor, next_survivor))
+                            states.remove(state)
 
     return indirect_maps
 
