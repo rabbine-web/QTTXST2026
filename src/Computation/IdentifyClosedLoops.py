@@ -1,8 +1,11 @@
+"""
+When provided a state, n, number of repitions, returns a list of tuples representing where a loop starts and ends
+"""
 def detect_closed_loops(
         kauf_state : int, 
         n : int, 
         k : int
-    )->list[int]:
+    )->list[tuple[int, int]]:
     forward_strands = []
     closed_loops = []
     for reptition in range(k):
@@ -121,17 +124,15 @@ def check_connection(forward_strands):
 
 
 if __name__ == "__main__":
-    """
     kauf_state = 0b101010011100
     n = 4
     k = 5
-    """
     
     # kauf_state = 0b101001100
     # n = 4
     # k = 3
 
-    kauf_state = 0b101010010010001100
-    n = 4
-    k = 6
-    #print(detect_closed_loops(kauf_state, n, k))
+    # kauf_state = 0b101010010010001100
+    # n = 4
+    # k = 6
+    print(detect_closed_loops(kauf_state, n, k))

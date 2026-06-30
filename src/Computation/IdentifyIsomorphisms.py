@@ -1,7 +1,7 @@
 import timeit
 import random
 
-from ..Visuals.TorusBraidVisual import *
+from src.Visuals.TorusBraidVisual import *
 
 def pPrint(SET):
     """

@@ -121,7 +121,7 @@ def generateTemperlyLeib(state: str) -> list[str]:
     word = []
     for i in range(len(state)):
         if state[i] == '1':
-            word.append("e" + str(i%2 + 1))
+            word.append("e" + str(i%3 + 1))
     return word
 
 #Input: states is a list of all the kauffman states, homDegrees, indexes and temperlyLeibWords are all lists of lists
@@ -224,7 +224,7 @@ def findClosedComponents(state: str) -> list[tuple[int, int]]:
             zeroCounter += 1
         
         if j < len(state) and state[j] == "1" and zeroCounter != 0:
-            if i % 2 + 1 == j % 2 + 1:
+            if i % 3 + 1 == j % 3 + 1:
                 closedComponents.append((i,j))
 
     return closedComponents
@@ -299,48 +299,48 @@ def findIsomorphisms(directMaps: DirectMaps, n: int, k: int) -> tuple[Isomorphis
         windowLength = 0
 
         for i in range(len(binarySource)):
-            if i <= len(binarySource)-3:
-                subWord3 = binarySource[i:i+3]
+            if i <= len(binarySource)-4:
+                subWord4 = binarySource[i:i+4]
                 startSigma = i % (n - 1) + 1
 
-                if subWord3 == "100":
+                if subWord4 == "1000" or subWord4 == "1010":
                     sourceType = 1
                     startIndex = i
                     importantIndex = i + 2
-                    windowLength = 3
+                    windowLength = len(subWord4)
                     break
 
-                if subWord3 == "101" and startSigma <= n - 2:
+                if (subWord4 == "1001" or subWord4 == "1101") and startSigma <= n - 2:
                     sourceType = 2
                     startIndex = i
                     importantIndex = i + 1
-                    windowLength = 3
+                    windowLength = len(subWord4)
                     break
 
-            elif i <= len(binarySource)-5:
-                subWord5 = binarySource[i:i+5]
-                if subWord5 == "01010": # e2e2
-                    importantIndexCanidate = i + 2
+            elif i <= len(binarySource)-7:
+                subWord7 = binarySource[i:i+7]
+                if subWord7 == "0100100" or subWord7 == "0100110":
+                    importantIndexCanidate = i + 4
                     sign = getSignForClosedComponent(source,importantIndexCanidate)
 
                     if sign == "+":
                         sourceType = 3
                         startIndex = i
                         importantIndex = importantIndexCanidate
-                        windowLength = 5
+                        windowLength = len(subWord7)
                         break
             
-            elif i == len(binarySource) - 4:
-                subWord4 = binarySource[i:i+4]
-                if(subWord4 == "0101"):
-                    importantIndexCanidate = i + 2
+            elif i == len(binarySource) - 6:
+                subWord6 = binarySource[i:i+6]
+                if(subWord6 == "001001" or subWord6 == "101001"):
+                    importantIndexCanidate = i + 5
                     sign = getSignForClosedComponent(source, importantIndexCanidate)
 
                     if sign == "+":
                         sourceType = 3
                         startIndex = i
                         importantIndex = importantIndexCanidate
-                        windowLength = 4
+                        windowLength = len(subWord6)
                         break
             
         if sourceType == 0:
@@ -369,15 +369,15 @@ def findIsomorphisms(directMaps: DirectMaps, n: int, k: int) -> tuple[Isomorphis
             targetMatrix = generateMatrix(n, k, binaryTarget)
 
             if sourceType == 1:
-                targetSubWord = binaryTarget[startIndex:startIndex+3] 
-                if targetSubWord != "101":
+                targetSubWord = binaryTarget[startIndex:startIndex+4] 
+                if targetSubWord != "1001" or (startIndex % 3 == 2 and targetSubWord != "1101"):
                     continue  
 
                 if not checkType1Target(targetMatrix):
                     continue 
             
             if sourceType == 2:
-                targetSubWord = binaryTarget[startIndex:startIndex+3] 
+                targetSubWord = binaryTarget[startIndex:startIndex+4] 
                 if targetSubWord != "111":
                     continue  
 
@@ -706,27 +706,29 @@ def printData(whittled: set[str], directMaps: DirectMaps, isomorphisms: Isomorph
 
     printIndirectMaps(indirectMaps)
 
-n = int(input("Enter the number of Strands "))
+#n = int(input("Enter the number of Strands "))
+print("number of strands will be 4")
+n = 4
 k = int(input("Enter the number of Repitions "))
 
-temp = input("Do you wish to proceed ")
 
-if(temp == "yes" or temp == "Yes"):
-    tempStates = generate_Kauffman_States(n,k)
-    states = decorateStates(tempStates)
+tempStates = generate_Kauffman_States(n,k)
+states = decorateStates(tempStates)
 
-    homDegrees = [[] for i in range((k*n-1))]
-    indexes = [[] for i in range((k*n-1))]
-    temperlyLeibWords = [[] for i in range((k*n-1))]
+print(states)
 
-    generateHomdegrees(states,homDegrees,indexes,temperlyLeibWords)
+homDegrees = [[] for i in range((k*n-1) + 1)]
+indexes = [[] for i in range((k*n-1) + 1)]
+temperlyLeibWords = [[] for i in range((k*n-1) + 1)]
 
-    directMaps = findDirectMaps(homDegrees,indexes,temperlyLeibWords)
-    isomorphisms, isoTypes = findIsomorphisms(directMaps,n,k)
+generateHomdegrees(states,homDegrees,indexes,temperlyLeibWords)
 
-    buildIsoPairs(isomorphisms)
+directMaps = findDirectMaps(homDegrees,indexes,temperlyLeibWords)
+isomorphisms, isoTypes = findIsomorphisms(directMaps,n,k)
 
-    whittledStates = whittleStates(directMaps,isomorphisms)
-    indirectMaps = findIndirectMaps(directMaps,isomorphisms,whittledStates)
+buildIsoPairs(isomorphisms)
 
-    printData(whittledStates,directMaps,isomorphisms,indirectMaps,isoTypes)
+whittledStates = whittleStates(directMaps,isomorphisms)
+indirectMaps = findIndirectMaps(directMaps,isomorphisms,whittledStates)
+
+printData(whittledStates,directMaps,isomorphisms,indirectMaps,isoTypes)
