@@ -221,7 +221,12 @@ B is the index of the bit to be flipped (from 1 to zero).
 
 This function detects all THREE isomorphism types.
 """
-def detect_distinguished_target(state: str, numStrands: int, sign: str = None) -> tuple:
+def detect_distinguished_target(
+    state: str, 
+    numStrands: int, 
+    sign: str = None
+) -> tuple:
+    
     k = len(state) // (numStrands - 1)
     state = int(state[::-1], 2)
 
