@@ -203,24 +203,27 @@ def find_closed_loops(
 ) -> list[tuple[int, int]]:
     
     kauf_state = int(state, 2)
-    k = math.ceil(kauf_state.bit_length() / (numStrands - 1))
+    required_repitions = math.ceil(kauf_state.bit_length() / (numStrands - 1))
+    total_length = required_repitions * (numStrands - 1)
+    excluded_length = total_length - 1
 
     forward_strands = []
     closed_loops = []
 
-    for reptition in range(k):
+    for reptition in range(required_repitions):
         for element_index in range(numStrands - 1):
-            # affects strands, element_index and element_index + 1
             position = (reptition * ( numStrands - 1)) + element_index
-            has_element = kauf_state >> ((numStrands - 1) * k - 1 - position) & 0b1
+            has_element = kauf_state >> (total_length - position - 1) & 0b1
+            string_position = excluded_length - position
+            
+            #print(str(position) + " " + str(has_element))
 
             if has_element:
-                forward_strands.append([element_index, element_index + 1, position])
+                forward_strands.append([element_index, element_index + 1, string_position])
                 #print("initially " + str(forward_strands))
                 # only grows the range
-                changed_range = check_connection(forward_strands)
+                range_was_changed = merge_ranges(forward_strands)
                 merged = 0
-
 
                 for i in reversed(range(len(forward_strands) - 1)):
                     if(forward_strands[-1][0] > forward_strands[i][0] and forward_strands[-1][1] < forward_strands[i][1]):
@@ -229,14 +232,11 @@ def find_closed_loops(
 
                     if forward_strands[-1][0] == forward_strands[i][0] and forward_strands[-1][1] == forward_strands[i][1] :
                         #print("closed loop detected 1")
-                        closed_loops.append([forward_strands.pop(i)[2], position])
-
-                        
+                        closed_loops.append([forward_strands.pop(i)[2], string_position])
                 
                 # if the element could connect to an exisiting range, check if it creates a closed loop or can connect to another range to merge
-                while changed_range:
+                while range_was_changed:
                     # if the range is identical to the previous range, then it's a closed loop
-
                     for i in reversed(range(len(forward_strands) - 1)):
                         if(forward_strands[-1][0] > forward_strands[i][0] and forward_strands[-1][1] < forward_strands[i][1]):
                             # if contained within another range, then cant
@@ -244,10 +244,10 @@ def find_closed_loops(
 
                         if forward_strands[-1][0] == forward_strands[i][0] and forward_strands[-1][1] == forward_strands[i][1] :
                             #print("closed loop detected 2")
-                            closed_loops.append([forward_strands.pop(i)[2], position])
+                            closed_loops.append([forward_strands.pop(i)[2], string_position])
 
                     # get potentially merged range index, if -1 then no merge
-                    changed_range = check_connection(forward_strands)
+                    range_was_changed = merge_ranges(forward_strands)
                     merged += 1
                 
                 #print("merged to " + str(forward_strands))
@@ -255,23 +255,17 @@ def find_closed_loops(
                 # if there's not 2 forward facing ends, then it's impossible to loop since we need 2 forward facing ends to connect to each other
                 if(forward_strands[-1][0] == forward_strands[-1][1]):
                     #print("closed loop detected 3")
-                    closed_loops.append([forward_strands.pop()[2], position])
-                    forward_strands.append([element_index, element_index + 1, position])
+                    closed_loops.append([forward_strands.pop()[2], string_position])
+                    forward_strands.append([element_index, element_index + 1, string_position])
 
-                elif merged == 1:
-                    #print("merged backwards, impossible to loop")
-                    forward_strands.pop()
-                    
-                # only merges twice if merging top and bottom
-                if merged == 2:
- 
-                    forward_strands.append([element_index, element_index + 1, position])
-                #print("ends up " + str(forward_strands))
-                #print()
-
-
-    
-    #print("leftover forward_strands: " + str(forward_strands))
+                # if it only merged once, then that means one strand points back
+                if merged != 0:
+                    if merged == 1:
+                        #print("merged backwards, impossible to loop")
+                        forward_strands.pop()
+                    forward_strands.append([element_index, element_index + 1, string_position])
+                #print("ends up " + str(forward_strands) + "\n")
+    #print("left over " + str(forward_strands))
 
     return closed_loops
 
@@ -279,7 +273,7 @@ def find_closed_loops(
 After updating the range of a loop, check if it can connect to another loop. 
 If so, merge the two loops into one and return the index of the loop to keep. If not, return -1.
 """
-def check_connection(forward_strands):
+def merge_ranges(forward_strands):
     # if the bottom of one range is the same as the top of another, then they are connected
     changed_range = len(forward_strands) - 1
     for other_range in reversed(range(len(forward_strands) - 1)):
@@ -288,7 +282,7 @@ def check_connection(forward_strands):
             return False
 
 
-        ##print("checking connection, > 0")
+        ###print("checking connection, > 0")
         if(forward_strands[changed_range][0] == forward_strands[other_range][1]):
             # since connected bottom to top, set new bottom
             forward_strands[changed_range][0] = forward_strands[other_range][0]
@@ -318,22 +312,6 @@ def check_connection(forward_strands):
         
     return False
 
-
-
-if __name__ == "__main__":
-    """
-    kauf_state = 0b101010011100
-    numStrands = 4
-    k = 5
-    """
-    
-    # kauf_state = 0b101001100
-    # numStrands = 4
-    # k = 3
-
-    kauf_state = "101010010010001100"
-    numStrands = 4
-    print(find_closed_loops(kauf_state, numStrands))
 
 """
 For a given state, find all targets which can be reached by a direct map
@@ -384,3 +362,11 @@ def backtrack_isomorphism(
 ) -> str:
 
     return str(int(str(target), 2) - 2**index).zfill(len(target))
+
+
+
+if __name__ == "__main__":
+
+    state = "10100"
+    numStrands = 3
+    print(find_closed_loops(state, numStrands))
