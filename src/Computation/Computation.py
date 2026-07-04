@@ -205,7 +205,6 @@ def find_closed_loops(
     kauf_state = int(state, 2)
     required_repitions = math.ceil(kauf_state.bit_length() / (numStrands - 1))
     total_length = required_repitions * (numStrands - 1)
-    excluded_length = total_length - 1
 
     forward_strands = []
     closed_loops = []
@@ -213,60 +212,40 @@ def find_closed_loops(
     for reptition in range(required_repitions):
         for element_index in range(numStrands - 1):
             position = (reptition * ( numStrands - 1)) + element_index
-            has_element = kauf_state >> (total_length - position - 1) & 0b1
-            string_position = excluded_length - position
+            string_position = total_length - position - 1
+            has_element = kauf_state >> (string_position) & 0b1
             
-            #print(str(position) + " " + str(has_element))
-
             if has_element:
                 forward_strands.append([element_index, element_index + 1, string_position])
-                #print("initially " + str(forward_strands))
-                # only grows the range
-                range_was_changed = merge_ranges(forward_strands)
-                merged = 0
+                print("initially " + str(forward_strands))
 
-                for i in reversed(range(len(forward_strands) - 1)):
-                    if(forward_strands[-1][0] > forward_strands[i][0] and forward_strands[-1][1] < forward_strands[i][1]):
-                        # if contained within another range, then cant
-                        break
-
-                    if forward_strands[-1][0] == forward_strands[i][0] and forward_strands[-1][1] == forward_strands[i][1] :
-                        #print("closed loop detected 1")
-                        closed_loops.append((string_position, forward_strands.pop(i)[2]))
+                merged = merge_ranges(forward_strands)
+                #merged = 0
                 
                 # if the element could connect to an exisiting range, check if it creates a closed loop or can connect to another range to merge
-                while range_was_changed:
-                    # if the range is identical to the previous range, then it's a closed loop
-                    for i in reversed(range(len(forward_strands) - 1)):
-                        if(forward_strands[-1][0] > forward_strands[i][0] and forward_strands[-1][1] < forward_strands[i][1]):
-                            # if contained within another range, then cant
-                            break
+                # while range_was_changed:
+                #     # get potentially merged range index, if -1 then no merge
+                #     range_was_changed = merge_ranges(forward_strands)
+                #     merged += 1
+                # print("merged to " + str(forward_strands))
 
-                        if forward_strands[-1][0] == forward_strands[i][0] and forward_strands[-1][1] == forward_strands[i][1] :
-                            #print("closed loop detected 2")
-                            closed_loops.append((string_position, forward_strands.pop(i)[2]))
-
-                    # get potentially merged range index, if -1 then no merge
-                    range_was_changed = merge_ranges(forward_strands)
-                    merged += 1
-                
-                #print("merged to " + str(forward_strands))
-
-                # if there's not 2 forward facing ends, then it's impossible to loop since we need 2 forward facing ends to connect to each other
-                if(forward_strands[-1][0] == forward_strands[-1][1]):
-                    #print("closed loop detected 3")
-                    closed_loops.append((string_position, forward_strands.pop()[2]))
-                    forward_strands.append([element_index, element_index + 1, string_position])
-
-                # if it only merged once, then that means one strand points back
+                # managed to merge at least once in while loop
                 if merged != 0:
-                    if merged == 1:
-                        #print("merged backwards, impossible to loop")
-                        forward_strands.pop()
-                    forward_strands.append([element_index, element_index + 1, string_position])
-                #print("ends up " + str(forward_strands) + "\n")
-    #print("left over " + str(forward_strands))
+                    # if there's not 2 forward facing ends, then it's impossible to loop since we need 2 forward facing ends to connect to each other
+                    if(forward_strands[-1][0] == forward_strands[-1][1]):
+                        print("closed loop detected")
+                        closed_loops.append((string_position, forward_strands.pop()[2]))
 
+                    # only merged once end, meaning the other is pointing backwards
+                    elif merged == 1:
+                        print("merged backwards, impossible to loop")
+                        forward_strands.pop()
+
+                    # every resolution also adds a new forward facing end
+                    forward_strands.append([element_index, element_index + 1, string_position])
+                print("ends up " + str(forward_strands) + "\n")
+        
+    print("left over " + str(forward_strands))
     return closed_loops
 
 """
@@ -275,42 +254,44 @@ If so, merge the two loops into one and return the index of the loop to keep. If
 """
 def merge_ranges(forward_strands):
     # if the bottom of one range is the same as the top of another, then they are connected
-    changed_range = len(forward_strands) - 1
+    count = 0
+    #-1 = len(forward_strands) - 1
+    print("trying to merge " + str(forward_strands[-1]))
     for other_range in reversed(range(len(forward_strands) - 1)):
-        if(forward_strands[changed_range][0] > forward_strands[other_range][0] and forward_strands[changed_range][1] < forward_strands[other_range][1]):
+        if(forward_strands[-1][0] > forward_strands[other_range][0] and forward_strands[-1][1] < forward_strands[other_range][1]):
             # if contained within another range, then cant
-            return False
-
+            print(f"contained within {forward_strands[-1]} in {forward_strands[other_range]}")
+            return count
 
         ###print("checking connection, > 0")
-        if(forward_strands[changed_range][0] == forward_strands[other_range][1]):
+        if(forward_strands[-1][0] == forward_strands[other_range][1]):
             # since connected bottom to top, set new bottom
-            forward_strands[changed_range][0] = forward_strands[other_range][0]
+            forward_strands[-1][0] = forward_strands[other_range][0]
         
-        elif(forward_strands[changed_range][1] == forward_strands[other_range][0]):
+        elif(forward_strands[-1][1] == forward_strands[other_range][0]):
             # since connected top to bottom, set new top
-            forward_strands[changed_range][1] = forward_strands[other_range][1]
+            forward_strands[-1][1] = forward_strands[other_range][1]
 
         # these will reduce the range since bottom connected bottom
-        elif(forward_strands[changed_range][0] == forward_strands[other_range][0]):
-
-            forward_strands[changed_range][0] = min(forward_strands[changed_range][1], forward_strands[other_range][1])
-            forward_strands[changed_range][1] = max(forward_strands[changed_range][1], forward_strands[other_range][1])
+        elif(forward_strands[-1][0] == forward_strands[other_range][0]):
+            forward_strands[-1][0] = min(forward_strands[-1][1], forward_strands[other_range][1])
+            forward_strands[-1][1] = max(forward_strands[-1][1], forward_strands[other_range][1])
 
         # these will reduce the range since bottom connected bottom
-        elif(forward_strands[changed_range][1] == forward_strands[other_range][1]):
-            if(forward_strands[changed_range][0] < forward_strands[other_range][0]):
-                forward_strands[changed_range][1] = forward_strands[other_range][0]
-            else:
-                forward_strands[changed_range][1] = forward_strands[changed_range][0]
-                forward_strands[changed_range][0] = forward_strands[other_range][0]
+        elif(forward_strands[-1][1] == forward_strands[other_range][1]):
+            print("top matches " + str(forward_strands[-1]) + " and " + str(forward_strands[other_range]))
+            forward_strands[-1][1] = min(forward_strands[-1][0], forward_strands[other_range][0])
+            forward_strands[-1][0] = max(forward_strands[-1][0], forward_strands[other_range][0])
+        
         else:
-            return False
+            print("nothing found")
+            continue
         
-        forward_strands[-1][2] = forward_strands.pop(other_range)[2]
-        return True
+        # get rid of matched range since it merged into changed range
+        forward_strands.pop(other_range)
+        count += 1
         
-    return False
+    return count
 
 
 """
@@ -363,10 +344,4 @@ def backtrack_isomorphism(
 
     return str(int(str(target), 2) - 2**index).zfill(len(target))
 
-
-
-# if __name__ == "__main__":
-
-#     state = "11000100000"
-#     numStrands = 3
-#     print(find_closed_loops(state, numStrands))
+print(find_closed_loops("101010101010", 4))
