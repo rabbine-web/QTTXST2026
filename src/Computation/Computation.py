@@ -1,16 +1,20 @@
 from kaufman_to_monoid import kaufman_to_monoid
+from math import ceil
 
 """
 STANDARD:
 
 TEMPERLEY-LIEB WORDS:
     - lists of integers from 1 to n-1
-    - must manually keep track of n for each word
+    - must manually keep track of numStrands for each word
 
 KAUFFMAN STATES:
     - strings of ones and zeroes
     - padding can be truncated or included
 
+    SIGN INFORMATION OF KAUFFMAN STATES:
+        - for each closed loop, there should be an ordered pair (s,e) of indices
+        - the indicies are where the clsoed loop begins and ends in the kauffman state
 """
 
 
@@ -190,9 +194,99 @@ def kauffman_indirect_maps(
 
     return []
 
+
+"""
+Input a kauffman state, 
+Output a list of ordered pairs for each closed loop, with pairs sorted based on first occurance.
+        Indices are ordered from the rightmost bit
+
+e.g.    find_closed_loops("101010010010101", 4) returns [(0, 14), (4, 7), (7, 10)]
+        find_closed_loops("101", 3) returns [(0, 2)]
+        find_closed_loops("1010", 3) returns [(1, 3)]
+
+Should be O(n) where n is the required length of the state, since each strand is only checked once.
+sorting at the end should be O(n) since closed loops is almost sorted except for nested/enclosed loops
+"""
+def find_closed_loops(
+    state: str,
+    numStrands: int
+) -> list[tuple[int, int]]:
+    
+    kauf_state = int(state, 2)
+    required_repitions = ceil(kauf_state.bit_length() / (numStrands - 1))
+
+    # tracks where each forward facing strand is connected to, if any
+    # first value is index to the other end of strand, second value is where the stand begins in the kauffman state
+    forward_strands = [[-1, -1] for _ in range(numStrands)]
+    closed_loops = []
+
+    # reads the kaufman state right to left
+    for reptition in range(required_repitions):
+        for element_index in range(numStrands - 1):
+            position_from_right = (reptition * (numStrands - 1)) + element_index
+            has_element = kauf_state >> (position_from_right) & 0b1
+
+            if has_element:
+                # which forward facing strands the backfacing strand is connected to, if any
+                backfacing_connection = [element_index, element_index + 1]
+                ends_merged = 0
+                rightmost_position = len(state) - 1 # at most will be at first position_from_right, len(state) - 1 from the rightmost
+
+                # if the connected end has a pre-existing assigned strand
+                if forward_strands[backfacing_connection[0]][0] != -1:
+                    ends_merged += 1
+                    backfacing_connection[0] = forward_strands[backfacing_connection[0]][0]
+                    rightmost_position = min(rightmost_position, forward_strands[backfacing_connection[0]][1]) # get the rightmost starting position_from_right
+
+                    # remove the old strand since merged into new strand
+                    remove_forwardfacing_strand(forward_strands, backfacing_connection[0])
+
+                if forward_strands[backfacing_connection[1]][0] != -1:
+                    ends_merged += 1
+                    backfacing_connection[1] = forward_strands[backfacing_connection[1]][0] # the new strand is connected to the old strand's other end
+                    rightmost_position = min(rightmost_position, forward_strands[backfacing_connection[1]][1]) # get the rightmost starting position_from_right
+
+                    # remove the old strand since merged into new strand
+                    remove_forwardfacing_strand(forward_strands, backfacing_connection[1])
+
+                # something had to merge so rightmost_position has been properly set
+                if backfacing_connection[0] == backfacing_connection[1]:
+                    closed_loops.append((rightmost_position, position_from_right))
+
+                # if connected to two ends, re add since can still be closed
+                # 1 and 0 connections don't have anything to re add
+                elif ends_merged > 1:
+                    add_forwardfacing_strand(forward_strands, backfacing_connection, rightmost_position)
+
+                # regardless of what happens, the forward facing strand of the inital backfacing strand will be added
+                add_forwardfacing_strand(forward_strands, (element_index, element_index + 1), position_from_right)
+
+    return sorted(closed_loops)
+
+def add_forwardfacing_strand(
+    forward_strands: list[list[int, int]],
+    ends: tuple[int, int],
+    position_from_right: int
+    ) -> None:
+    forward_strands[ends[0]][0] = ends[1]
+    forward_strands[ends[0]][1] = position_from_right
+    forward_strands[ends[1]][0] = ends[0]
+    forward_strands[ends[1]][1] = position_from_right
+
+def remove_forwardfacing_strand(
+    forward_strands: list[list[int, int]],
+    this_end: int, # one end points to the other end so only one is needed
+    ) -> None:
+    other_end = forward_strands[this_end][0]
+    forward_strands[other_end][0] = -1
+    forward_strands[other_end][1] = -1
+    forward_strands[this_end][0] = -1
+    forward_strands[this_end][1] = -1
+
+
 """
 For a given state, find all targets which can be reached by a direct map
-# Returns a tuple (target, isomorphism_type, index) where index is the position of the
+# Returns a tuple (target, isomorphism_type, index) where index is the position_from_right of the
 # bit to by flipped in the state to reach the target of given isomorphism_type
 """
 def find_direct_targets(
