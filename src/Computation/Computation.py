@@ -197,15 +197,9 @@ def kauffman_indirect_maps(
 Given a kauffman state, returns an ordered pair for each closed loop, with indicies 
 bounding where the loop occurs in the state 
 
-This will be accomplished by keeping track of the forward facing ends of potential 
-strands and connecting them if the 
+e.g. find_closed_loops("101010010010101", 4) returns [(4, 7), (7, 10), (0, 14)]
 
-If a backfacing strand connects only once, then the whole stand is to be removed as one 
-end is facing backwards, which can't connect to anything else, making it impossible to
-form a closed loop.
-
-There cannot be open strands entirely behind another closed strand as the 1-resolution
-to form the larger loop would close or remove the smaller loop.
+Should be O(n) where n is the length of the state, since each strand is only checked once.
 """
 def find_closed_loops(
     state: str,
@@ -240,6 +234,7 @@ def find_closed_loops(
 
                 # if the connected end has a pre-existing assigned strand
                 if forward_strands[backfacing_connection[0]][0] != -1:
+                    print("Found first connection")
                     ends_merged += 1
                     temp_index = forward_strands[backfacing_connection[0]][0] # save where this strand is connected to
                     min_position = min(min_position, forward_strands[backfacing_connection[0]][1]) # get the rightmost starting string_position
@@ -254,6 +249,7 @@ def find_closed_loops(
                     backfacing_connection[0] = temp_index
 
                 if forward_strands[backfacing_connection[1]][0] != -1:
+                    print("Found second connection")
                     ends_merged += 1
                     temp_index = forward_strands[backfacing_connection[1]][0] # save where this strand is connected to
                     min_position = min(min_position, forward_strands[backfacing_connection[1]][1]) # get the rightmost starting string_position
@@ -267,16 +263,20 @@ def find_closed_loops(
                     # the new strand is connected to the old strand's other end
                     backfacing_connection[1] = temp_index
 
+                print(f"merged forward strands: {forward_strands}")
+
                 # something had to merge so min_position has been properly set
                 if backfacing_connection[0] == backfacing_connection[1]:
-                    closed_loops.append((string_position, min_position))
+                    print("closed loop detected")
+                    closed_loops.append((min_position, string_position))
 
                 # if connected to two ends, then the old strands must be perserved
                 elif ends_merged > 1:
                     forward_strands[backfacing_connection[0]][0] = backfacing_connection[1]
-                    forward_strands[backfacing_connection[0]][1] = string_position
+                    forward_strands[backfacing_connection[0]][1] = min_position
                     forward_strands[backfacing_connection[1]][0] = backfacing_connection[0]
-                    forward_strands[backfacing_connection[1]][1] = string_position
+                    forward_strands[backfacing_connection[1]][1] = min_position
+                    print(f"old merged, now {forward_strands}")
                 # strands with 1 connection are removed since one backfacing end still exists
                 # strands with 0 connections are added in the following code
 
@@ -342,4 +342,4 @@ def backtrack_isomorphism(
 
     return str(int(str(target), 2) - 2**index).zfill(len(target))
 
-print(find_closed_loops("001110010101", 4))
+print(find_closed_loops("101010010010101", 4))
