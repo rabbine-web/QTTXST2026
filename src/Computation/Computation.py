@@ -194,12 +194,16 @@ def kauffman_indirect_maps(
 
 
 """
-Given a kauffman state, returns an ordered pair for each closed loop, with indicies 
-bounding where the loop occurs in the state 
+Input a kauffman state, 
+Output a list of ordered pairs for each closed loop, with pairs sorted based on first occurance.
+        Indices are ordered from the rightmost bit
 
-e.g. find_closed_loops("101010010010101", 4) returns [(4, 7), (7, 10), (0, 14)]
+e.g.    find_closed_loops("101010010010101", 4) returns [(0, 14), (4, 7), (7, 10)]
+        find_closed_loops("101", 3) returns [(0, 2)]
+        find_closed_loops("1010", 3) returns [(1, 3)]
 
-Should be O(n) where n is the length of the state, since each strand is only checked once.
+Should be O(n) where n is the required length of the state, since each strand is only checked once.
+sorting at the end should be O(n) since closed loops is almost sorted except for nested/enclosed loops
 """
 def find_closed_loops(
     state: str,
@@ -208,93 +212,79 @@ def find_closed_loops(
     
     kauf_state = int(state, 2)
     required_repitions = math.ceil(kauf_state.bit_length() / (numStrands - 1))
-    required_length = required_repitions * (numStrands - 1)
-    print(f"required repitions: {required_repitions}, required length: {required_length}\n")
 
+    # tracks where each forward facing strand is connected to, if any
     # first value is index to the other end of strand, second value is where the stand begins in the kauffman state
     forward_strands = [[-1, -1] for _ in range(numStrands)]
     closed_loops = []
 
-    # only loop over repitions with 1s, leading 0s are ignored
+    # reads the kaufman state right to left
     for reptition in range(required_repitions):
         for element_index in range(numStrands - 1):
-            string_position = (reptition * (numStrands - 1)) + element_index
-            binary_position = required_length - string_position - 1
-            has_element = kauf_state >> (string_position) & 0b1
-            print(f"checking string position {string_position} and binary position {binary_position}")
-            #print(f"containing element {state[binary_position]}")
+            position_from_right = (reptition * (numStrands - 1)) + element_index
+            has_element = kauf_state >> (position_from_right) & 0b1
+
             if has_element:
-                # 101010101010
-                print(f"found backfacing strand at {string_position} connecting {element_index} and {element_index + 1}")
-                print(f"initial forward strands: {forward_strands}")
                 # which forward facing strands the backfacing strand is connected to, if any
                 backfacing_connection = [element_index, element_index + 1]
                 ends_merged = 0
-                min_position = len(state) - 1 # at most will be at first string_position, len(state) - 1 from the rightmost
+                rightmost_position = len(state) - 1 # at most will be at first position_from_right, len(state) - 1 from the rightmost
 
                 # if the connected end has a pre-existing assigned strand
                 if forward_strands[backfacing_connection[0]][0] != -1:
-                    print("Found first connection")
                     ends_merged += 1
-                    temp_index = forward_strands[backfacing_connection[0]][0] # save where this strand is connected to
-                    min_position = min(min_position, forward_strands[backfacing_connection[0]][1]) # get the rightmost starting string_position
+                    backfacing_connection[0] = forward_strands[backfacing_connection[0]][0]
+                    rightmost_position = min(rightmost_position, forward_strands[backfacing_connection[0]][1]) # get the rightmost starting position_from_right
 
                     # remove the old strand since merged into new strand
-                    forward_strands[backfacing_connection[0]][0] = -1
-                    forward_strands[backfacing_connection[0]][1] = -1
-                    forward_strands[temp_index][0] = -1
-                    forward_strands[temp_index][1] = -1
-
-                    # the new strand is connected to the old strand's other end
-                    backfacing_connection[0] = temp_index
+                    remove_forwardfacing_strand(forward_strands, backfacing_connection[0])
 
                 if forward_strands[backfacing_connection[1]][0] != -1:
-                    print("Found second connection")
                     ends_merged += 1
-                    temp_index = forward_strands[backfacing_connection[1]][0] # save where this strand is connected to
-                    min_position = min(min_position, forward_strands[backfacing_connection[1]][1]) # get the rightmost starting string_position
+                    backfacing_connection[1] = forward_strands[backfacing_connection[1]][0] # the new strand is connected to the old strand's other end
+                    rightmost_position = min(rightmost_position, forward_strands[backfacing_connection[1]][1]) # get the rightmost starting position_from_right
 
                     # remove the old strand since merged into new strand
-                    forward_strands[backfacing_connection[1]][0] = -1
-                    forward_strands[backfacing_connection[1]][1] = -1
-                    forward_strands[temp_index][0] = -1
-                    forward_strands[temp_index][1] = -1
+                    remove_forwardfacing_strand(forward_strands, backfacing_connection[1])
 
-                    # the new strand is connected to the old strand's other end
-                    backfacing_connection[1] = temp_index
-
-                print(f"merged forward strands: {forward_strands}")
-
-                # something had to merge so min_position has been properly set
+                # something had to merge so rightmost_position has been properly set
                 if backfacing_connection[0] == backfacing_connection[1]:
-                    print("closed loop detected")
-                    closed_loops.append((min_position, string_position))
+                    closed_loops.append((rightmost_position, position_from_right))
 
-                # if connected to two ends, then the old strands must be perserved
+                # if connected to two ends, re add since can still be closed
+                # 1 and 0 connections don't have anything to re add
                 elif ends_merged > 1:
-                    forward_strands[backfacing_connection[0]][0] = backfacing_connection[1]
-                    forward_strands[backfacing_connection[0]][1] = min_position
-                    forward_strands[backfacing_connection[1]][0] = backfacing_connection[0]
-                    forward_strands[backfacing_connection[1]][1] = min_position
-                    print(f"old merged, now {forward_strands}")
-                # strands with 1 connection are removed since one backfacing end still exists
-                # strands with 0 connections are added in the following code
+                    add_forwardfacing_strand(forward_strands, backfacing_connection, rightmost_position)
 
                 # regardless of what happens, the forward facing strand of the inital backfacing strand will be added
-                forward_strands[element_index][0] = element_index + 1
-                forward_strands[element_index][1] = string_position
-                forward_strands[element_index + 1][0] = element_index
-                forward_strands[element_index + 1][1] = string_position
+                add_forwardfacing_strand(forward_strands, (element_index, element_index + 1), position_from_right)
 
-                print(f"final forward strands: {forward_strands}")
-            print()
+    return sorted(closed_loops)
 
-    return closed_loops
+def add_forwardfacing_strand(
+    forward_strands: list[list[int, int]],
+    ends: tuple[int, int],
+    position_from_right: int
+    ) -> None:
+    forward_strands[ends[0]][0] = ends[1]
+    forward_strands[ends[0]][1] = position_from_right
+    forward_strands[ends[1]][0] = ends[0]
+    forward_strands[ends[1]][1] = position_from_right
+
+def remove_forwardfacing_strand(
+    forward_strands: list[list[int, int]],
+    this_end: int, # one end points to the other end so only one is needed
+    ) -> None:
+    other_end = forward_strands[this_end][0]
+    forward_strands[other_end][0] = -1
+    forward_strands[other_end][1] = -1
+    forward_strands[this_end][0] = -1
+    forward_strands[this_end][1] = -1
 
 
 """
 For a given state, find all targets which can be reached by a direct map
-# Returns a tuple (target, isomorphism_type, index) where index is the string_position of the
+# Returns a tuple (target, isomorphism_type, index) where index is the position_from_right of the
 # bit to by flipped in the state to reach the target of given isomorphism_type
 """
 def find_direct_targets(
@@ -342,4 +332,3 @@ def backtrack_isomorphism(
 
     return str(int(str(target), 2) - 2**index).zfill(len(target))
 
-print(find_closed_loops("101010010010101", 4))
