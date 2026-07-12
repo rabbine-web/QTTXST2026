@@ -217,7 +217,7 @@ def find_closed_loops(
 
     # tracks where each forward facing strand is connected to, if any
     # first value is index to the other end of strand, second value is where the stand begins in the kauffman state
-    forward_strands = [[-1, -1] for _ in range(numStrands)]
+    forward_strands = [[-1, -1, -1, -1] for _ in range(numStrands)]
     closed_loops = []
 
     # reads the kaufman state right to left
@@ -231,12 +231,16 @@ def find_closed_loops(
                 backfacing_connection = [element_index, element_index + 1]
                 ends_merged = 0
                 rightmost_position = len(state) - 1 # at most will be at first position_from_right, len(state) - 1 from the rightmost
+                lowest = numStrands
+                highest = -1
 
                 # if the connected end has a pre-existing assigned strand
                 if forward_strands[backfacing_connection[0]][0] != -1:
                     ends_merged += 1
                     backfacing_connection[0] = forward_strands[backfacing_connection[0]][0]
                     rightmost_position = min(rightmost_position, forward_strands[backfacing_connection[0]][1]) # get the rightmost starting position_from_right
+                    lowest = min(lowest,  forward_strands[backfacing_connection[0]][2])
+                    highest = max(highest,  forward_strands[backfacing_connection[0]][3])
 
                     # remove the old strand since merged into new strand
                     remove_forwardfacing_strand(forward_strands, backfacing_connection[0])
@@ -245,33 +249,45 @@ def find_closed_loops(
                     ends_merged += 1
                     backfacing_connection[1] = forward_strands[backfacing_connection[1]][0] # the new strand is connected to the old strand's other end
                     rightmost_position = min(rightmost_position, forward_strands[backfacing_connection[1]][1]) # get the rightmost starting position_from_right
+                    lowest = min(lowest,  forward_strands[backfacing_connection[1]][2])
+                    highest = max(highest,  forward_strands[backfacing_connection[1]][3])
 
                     # remove the old strand since merged into new strand
                     remove_forwardfacing_strand(forward_strands, backfacing_connection[1])
 
                 # something had to merge so rightmost_position has been properly set
                 if backfacing_connection[0] == backfacing_connection[1]:
-                    closed_loops.append((rightmost_position, position_from_right))
+                    closed_loops.append((rightmost_position, position_from_right, lowest, highest))
 
                 # if connected to two ends, re add since can still be closed
                 # 1 and 0 connections don't have anything to re add
                 elif ends_merged > 1:
-                    add_forwardfacing_strand(forward_strands, backfacing_connection, rightmost_position)
+                    add_forwardfacing_strand(forward_strands, backfacing_connection, rightmost_position, lowest, highest)
 
                 # regardless of what happens, the forward facing strand of the inital backfacing strand will be added
-                add_forwardfacing_strand(forward_strands, (element_index, element_index + 1), position_from_right)
+                add_forwardfacing_strand(forward_strands, (element_index, element_index + 1), position_from_right, element_index, element_index + 1)
 
     return sorted(closed_loops)
 
 def add_forwardfacing_strand(
     forward_strands: list[list[int, int]],
     ends: tuple[int, int],
-    position_from_right: int
+    position_from_right: int,
+    lowest: int,
+    highest: int
     ) -> None:
     forward_strands[ends[0]][0] = ends[1]
     forward_strands[ends[0]][1] = position_from_right
+    forward_strands[ends[0]][2] = lowest
+    forward_strands[ends[0]][3] = highest
+
     forward_strands[ends[1]][0] = ends[0]
     forward_strands[ends[1]][1] = position_from_right
+    forward_strands[ends[1]][2] = lowest
+    forward_strands[ends[1]][3] = highest
+
+
+
 
 def remove_forwardfacing_strand(
     forward_strands: list[list[int, int]],
@@ -280,8 +296,13 @@ def remove_forwardfacing_strand(
     other_end = forward_strands[this_end][0]
     forward_strands[other_end][0] = -1
     forward_strands[other_end][1] = -1
+    forward_strands[other_end][2] = -1
+    forward_strands[other_end][3] = -1
+    
     forward_strands[this_end][0] = -1
     forward_strands[this_end][1] = -1
+    forward_strands[this_end][2] = -1
+    forward_strands[this_end][3] = -1
 
 
 """
@@ -318,35 +339,51 @@ This function detects all THREE isomorphism types.
 def detect_distinguished_target(
     state: str, 
     numStrands: int, 
-    sign: str = None
-) -> tuple:
+    loopRanges: list[tuple[int, int, int]],
+    loopSigns: list[str]
+) -> tuple[int, int]:
+    # going to assume that all isomorphisms require the smallest possible loop?
+    # check type 1 and type 2 isomorphisms
+    type_and_index = check_type_1_or_2()
+    if type_and_index is not None:
+        return type_and_index
     
-    k = len(state) // (numStrands - 1)
-    state = int(state[::-1], 2)
+    detect_type_3_target(state, numStrands, loopRanges, loopSigns)
+"""
+Given a state, check if it is a type 1 or type 2 isomorphism target.
+If it is a target, return the index of the bit to be flipped to reach the source state
+If it isn't a target, return -1
+"""
+def check_type_1_or_2(
+    state: str,
+    numStrands: int,
+    loopRanges: list[tuple[int, int, int]],
+    loopSigns: list[str]
+) -> tuple[int, int]:
+    
+    return None
 
-    for iso_type, stype, offset in [(1,"S1",numStrands-1), (2,"S2",1)]:
-        matched, j = _check_target(state, numStrands, k, stype, offset, sign)
-        if matched:
-            return (iso_type, j)
 
-    matched, j = _is_target3(state, numStrands)
-    if matched:
-        return (3, j)
+"""
+Given a state, check if it is a type 3 isomorphism target. To check this, we need to check if the state
+with e_i e_i+1 e_i, this is first possible occurance
 
-    return (0, None)
+If it is a target, return the index of the bit to be flipped to reach the source state
+If it isn't a target, return -1
+"""
+def check_type_1_or_2(
+    state: str,
+    numStrands: int,
+    loopRanges: list[tuple[int, int, int]],
+    loopSigns: list[str]
+) -> tuple[int, int]:
+    return None
+
 
 def bit(state: int, index: int) -> int:
     return (state >> index) & 1
 
 
-def has_circle(state: int, n: int, k: int) -> bool:
-    for j in range(k * (n - 1) - (n - 1)):
-        sigma_i = (j % (n - 1)) + 1
-        if not all((pos % (n-1)) + 1 != sigma_i for pos in range(j+2, j+n-2)):
-            continue
-        if bit(state,j)==1 and bit(state,j+1)==0 and bit(state,j+n-2)==0 and bit(state,j+n-1)==1:
-            return True
-    return False
 
 
 def source_matches(state: int, n: int, k: int) -> list:
@@ -405,19 +442,7 @@ def backtrack_isomorphism(
 
 
 def main():
-    state_str = input("Enter Kauffman state (e.g. 0110): ").strip()
-    n = int(input("Enter number of strands: ").strip())
-    k = len(state_str) // (n - 1)
-    state = int(state_str[::-1], 2)
-
-    sign = None
-    if has_circle(state, n, k):
-        print("This state has closed loops.")
-        sign = input("Enter sign (+ or -): ").strip()
-        while sign not in ("+", "-"):
-            sign = input("Invalid. Enter + or -: ").strip()
-
-    print(detect_distinguished_target(state_str, n, sign))
+    print(find_closed_loops("01010", 3))
 
 if __name__ == "__main__":
     main()
