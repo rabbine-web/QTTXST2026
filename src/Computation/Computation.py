@@ -236,11 +236,11 @@ def find_closed_loops(
             has_element = kauf_state >> (position_from_right) & 0b1
 
             if has_element:
-                print(f"element found at position from right: {position_from_right} ")
+                print(f"element found at position from right: {position_from_right} and is of {state[position_from_right]}")
                 print(f"before: {forward_strands} ")
                 # which forward facing strands the backfacing strand is connected to, if any
                 backfacing_connection = [element_index, element_index + 1]
-                rightmost_position = forward_strands[element_index][1] # at most will be at first position_from_right, len(state) - 1 from the rightmost
+                rightmost_position = min(forward_strands[element_index][1], forward_strands[element_index + 1][1]) # at most will be at first position_from_right, len(state) - 1 from the rightmost
                 #strand_id = forward_strands[element_index][1]
                 lowest = numStrands
                 highest = -1
@@ -257,9 +257,6 @@ def find_closed_loops(
                     lowest = min(lowest,  forward_strands[backfacing_connection[0]][2])
                     highest = max(highest,  forward_strands[backfacing_connection[0]][3])
 
-                    # remove the old strand since merged into new strand
-                    remove_forwardfacing_strand(forward_strands, backfacing_connection[0])
-
                 if forward_strands[backfacing_connection[1]][0] >= 0:
                     print(f"merged bottom")
                     top_merged = True
@@ -268,10 +265,12 @@ def find_closed_loops(
                     lowest = min(lowest,  forward_strands[backfacing_connection[1]][2])
                     highest = max(highest,  forward_strands[backfacing_connection[1]][3])
 
-                    # remove the old strand since merged into new strand
-                    remove_forwardfacing_strand(forward_strands, backfacing_connection[1]) 
 
-
+                if(bottom_merged):
+                    remove_forwardfacing_strand(forward_strands, backfacing_connection[0], rightmost_position)
+                    
+                if(top_merged):
+                    remove_forwardfacing_strand(forward_strands, backfacing_connection[1], rightmost_position) 
 
 
 
@@ -290,7 +289,7 @@ def find_closed_loops(
                     # in the one case, we need to track which side got merged since
                     print(f"searching gaps [{lowest}, {highest}]")
                     for affected_index in range(lowest, highest):
-                        print(f"affected index {affected_index}")
+                        print(f"affected index {affected_index} comparing {waiting_for[affected_index][0]} and {rightmost_position}")
                         if(affected_index % 2 == element_index % 2):
                             print(f"not affecting the other end")
                             continue
@@ -304,7 +303,6 @@ def find_closed_loops(
                 waiting_for[element_index][0] = forward_strands[backfacing_connection[0]][1]
                 waiting_for[element_index][1] = position_from_right
 
-                print(f"backstrands {backfacing_connection}")
                 print(f"merged: {forward_strands} ")
                 print(f"waiting strands {waiting_for}")
 
@@ -340,15 +338,18 @@ def add_forwardfacing_strand(
 def remove_forwardfacing_strand(
     forward_strands: list[list[int, int]],
     this_end: int, # one end points to the other end so only one is needed
+    rightmost_position : int
     ) -> None:
     other_end = forward_strands[this_end][0]
     forward_strands[other_end][0] = -1
-    #forward_strands[other_end][1] = -1
+    #forward_strands[other_end][1] = -1 * (other_end + 2)
+    forward_strands[other_end][1] = rightmost_position
     forward_strands[other_end][2] = -1
     forward_strands[other_end][3] = -1
     
     forward_strands[this_end][0] = -1
-    #forward_strands[this_end][1] = -1
+    # forward_strands[this_end][1] =  -1 * (this_end + 2)
+    forward_strands[this_end][1] =  rightmost_position
     forward_strands[this_end][2] = -1
     forward_strands[this_end][3] = -1
 
@@ -497,10 +498,10 @@ def backtrack_isomorphism(
 
 
 def main():
-    print(find_closed_loops("001111011100", 4))
-    print(("001111011100", 4))
+    # print(find_closed_loops("001111011100", 4))
+    # print(("001111011100", 4))
     
-    #print(find_closed_loops("111", 3))
+    print(find_closed_loops("11110", 3))
     
 
 if __name__ == "__main__":
