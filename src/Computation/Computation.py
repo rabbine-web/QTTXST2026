@@ -257,6 +257,8 @@ def find_closed_loops(
                     lowest = min(lowest,  forward_strands[backfacing_connection[0]][2])
                     highest = max(highest,  forward_strands[backfacing_connection[0]][3])
 
+                    remove_forwardfacing_strand(forward_strands, backfacing_connection[0], rightmost_position)
+
                 if forward_strands[backfacing_connection[1]][0] >= 0:
                     print(f"merged bottom")
                     top_merged = True
@@ -265,15 +267,11 @@ def find_closed_loops(
                     lowest = min(lowest,  forward_strands[backfacing_connection[1]][2])
                     highest = max(highest,  forward_strands[backfacing_connection[1]][3])
 
-
-                if(bottom_merged):
-                    remove_forwardfacing_strand(forward_strands, backfacing_connection[0], rightmost_position)
-                    
-                if(top_merged):
                     remove_forwardfacing_strand(forward_strands, backfacing_connection[1], rightmost_position) 
 
 
 
+                print(f"backfacing connections: {backfacing_connection}")
                 # something had to merge so rightmost_position has been properly set
                 if backfacing_connection[0] == backfacing_connection[1]:
                     print("closed loop found")
@@ -295,9 +293,14 @@ def find_closed_loops(
                             continue
                         if(waiting_for[affected_index][0] == rightmost_position):
                             print(f"pinch found at {waiting_for[affected_index][1]}")
-                            complete_bottom.append(waiting_for[affected_index][1])
+                            if top_merged:
+                                complete_bottom.append(waiting_for[affected_index][1])
+                            if bottom_merged:
+                                complete_top.append(waiting_for[affected_index][1])
+
                             waiting_for[affected_index][0] = None
                             waiting_for[affected_index][1] = None
+                            
                     
                 # what strand we're expecting and where it's recorded to start from
                 waiting_for[element_index][0] = forward_strands[backfacing_connection[0]][1]
@@ -501,7 +504,7 @@ def main():
     # print(find_closed_loops("001111011100", 4))
     # print(("001111011100", 4))
     
-    print(find_closed_loops("11110", 3))
+    print(find_closed_loops("11111100", 3))
     
 
 if __name__ == "__main__":
