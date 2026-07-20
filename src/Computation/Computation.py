@@ -293,10 +293,19 @@ def find_closed_loops(
                             continue
                         if(waiting_for[affected_index][0] == rightmost_position):
                             print(f"pinch found at {waiting_for[affected_index][1]}")
-                            if top_merged:
-                                complete_bottom.append(waiting_for[affected_index][1])
-                            if bottom_merged:
-                                complete_top.append(waiting_for[affected_index][1])
+                            #if pinch in closed loop
+                            if waiting_for[affected_index][0] >= 0:
+                                if(affected_index < numStrands - 1):
+                                    complete_bottom.append(waiting_for[affected_index][1])
+                                if(affected_index > 0):
+                                    complete_top.append(waiting_for[affected_index][1])
+
+                            # if pinch in non closed loop
+                            else:
+                                if element_index + 1 < backfacing_connection[1]:
+                                    complete_bottom.append(waiting_for[affected_index][1])
+                                if element_index > backfacing_connection[0]:
+                                    complete_top.append(waiting_for[affected_index][1])
 
                             waiting_for[affected_index][0] = None
                             waiting_for[affected_index][1] = None
