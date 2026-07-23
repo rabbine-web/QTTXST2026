@@ -216,21 +216,25 @@ def find_features(
     # tracks where each forward facing strand is connected to, if any
     # we can use earliest in the kauffman state as ID's for each stand
     # [other end of strand, earliest in the kauffman state, lowest strand, highest strand]
-    forward_strands = [[-1, -1 * index, index - 2, index - 2] for index in range(2, numStrands + 2)]
+    forward_strands = [[-1, -1 * index, index - 1, index - 1] for index in range(1, numStrands + 1)]
     waiting_for = [[None, None] for _ in range(numStrands - 1)]
 
     closed_loops = []
     complete_top = [] # almost became loop, but has a single 1 resolution at the top
     complete_bottom = [] # almost became loop, but has a single 1 resolution at the bottom
 
+    print(state + "\n")
+    print(str(numStrands - 1) + "\n")
     # reads the kaufman state right to left
     for reptition in range(required_repitions):
-        for element_index in range(numStrands - 1):
-            position_from_right = (reptition * (numStrands - 1)) + element_index
+        for element_index in range(numStrands - 2, -1, -1):
+            strand_index = numStrands - 2 - element_index
+            position_from_right = (reptition * (numStrands - 1)) + strand_index
             has_element = kauf_state >> (position_from_right) & 0b1
+            print(f" {position_from_right}, {strand_index} and is of {state[len(state) - 1 - position_from_right]}")
 
             if has_element:
-                print(f"element found at position from right: {position_from_right} and is of {state[position_from_right]}")
+                print(f"element found at position from right: {position_from_right} and is of {state[len(state) - 1 - position_from_right]}")
                 print(f"before: {forward_strands} ")
                 # which forward facing strands the backfacing strand is connected to, if any
                 backfacing_connection = [element_index, element_index + 1]
@@ -247,7 +251,7 @@ def find_features(
 
                 # if the connected end has a pre-existing assigned strand
                 if forward_strands[backfacing_connection[0]][0] >= 0:
-                    print(f"merged top")
+                    print(f"merged bottom")
                     bottom_merged = True
                     backfacing_connection[0] = forward_strands[backfacing_connection[0]][0]
                     rightmost_position = min(rightmost_position, forward_strands[backfacing_connection[0]][1]) # get the rightmost starting position_from_right
@@ -256,7 +260,7 @@ def find_features(
 
 
                     if forward_strands[backfacing_connection[1]][0] >= 0:
-                        print(f"merged bottom")
+                        print(f"merged top")
                         top_merged = True
                         backfacing_connection[1] = forward_strands[backfacing_connection[1]][0] # the new strand is connected to the old strand's other end
                         rightmost_position = min(rightmost_position, forward_strands[backfacing_connection[1]][1]) # get the rightmost starting position_from_right
@@ -268,7 +272,7 @@ def find_features(
                     remove_forwardfacing_strand(forward_strands, backfacing_connection[0], rightmost_position)
                 
                 elif forward_strands[backfacing_connection[1]][0] >= 0:
-                    print(f"merged bottom")
+                    print(f"merged top")
                     top_merged = True
                     backfacing_connection[1] = forward_strands[backfacing_connection[1]][0] # the new strand is connected to the old strand's other end
                     rightmost_position = min(rightmost_position, forward_strands[backfacing_connection[1]][1]) # get the rightmost starting position_from_right
@@ -290,19 +294,20 @@ def find_features(
                 elif bottom_merged and top_merged:
                     add_forwardfacing_strand(forward_strands, backfacing_connection, rightmost_position, lowest, highest)
 
+                print(f"merged: {forward_strands} ")
 
                 print(f"waiting strands before {waiting_for}")
 
                 # only need to check multiple if merged to them
                 # in the one case, we need to track which side got merged since
                 print(f"searching gaps [{lowest}, {highest}]")
-                for affected_index in range(lowest, highest): # check if the connected portions fullfilled their conditions
-                    print(f"affected index {affected_index} comparing {waiting_for[affected_index][0]} and {rightmost_position}")
+                for affected_index in range(lowest, min(highest + 1, numStrands - 1)): # check if the connected portions fullfilled their conditions
+                    print(f"affected index {affected_index}, element_index {element_index}, comparing {waiting_for[affected_index][0]} and {rightmost_position}")
                     # other side of pinch only comes every other
                     if(affected_index % 2 == element_index % 2):
                         print(f"not affecting the other end")
                         continue
-                    print("made it past")
+                    print(f"made it past, waiting for {waiting_for[affected_index][0]}, rightmost is {rightmost_position}")
                     if(waiting_for[affected_index][0] == rightmost_position):
                         print(f"pinch found at {waiting_for[affected_index][1]}")
                         #if pinch in closed loop
@@ -318,7 +323,7 @@ def find_features(
                             print(f"not closed")
                             if element_index + 1 < backfacing_connection[1]:
                                 complete_bottom.append(waiting_for[affected_index][1])
-                            if element_index > backfacing_connection[0]:
+                            elif element_index >= backfacing_connection[0]:
                                 complete_top.append(waiting_for[affected_index][1])
 
                         # if neither case, then this gap was overwritten by a different resolution
@@ -330,7 +335,6 @@ def find_features(
                 waiting_for[element_index][0] = forward_strands[backfacing_connection[0]][1]
                 waiting_for[element_index][1] = position_from_right
 
-                print(f"merged: {forward_strands} ")
                 print(f"waiting strands after {waiting_for}")
 
                 # regardless of what happens, the forward facing strand of the inital backfacing strand will be added
