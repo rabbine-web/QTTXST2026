@@ -194,174 +194,24 @@ def kauffman_indirect_maps(
 
     return []
 
-
-"""
-Input a kauffman state, 
-Output a list of ordered pairs for each closed loop, with pairs sorted based on first occurance.
-        Indices are ordered from the rightmost bit, the location of pinches which lead to a bubble 
-        ontop, and location of pinches which lead to a bubble on the bottom
-
-e.g.    find_features("101010010101", 4)    returns [[(0, 11, 0, 3), (4, 7, 1, 2)], [], []]
-        find_features("1111", 3)            returns [[], [1], [2]]
-        find_features("11000011000", 3)     returns [[], [9], [4]]
-"""
-def find_features(
-    state: str,
-    numStrands: int
-) -> list[tuple[int, int], list[int], list[int]]:
-    
-    kauf_state = int(state, 2)
-    required_repitions = ceil(kauf_state.bit_length() / (numStrands - 1))
-
-    # tracks where each forward facing strand is connected to, if any
-    # we can use earliest in the kauffman state as ID's for each stand
-    # [other end of strand, earliest in the kauffman state, lowest strand, highest strand]
-    forward_strands = [[-1, -1 * index, index - 1, index - 1] for index in range(1, numStrands + 1)]
-    waiting_for = [[None, None] for _ in range(numStrands - 1)]
-
-    closed_loops = []
-    complete_top = [] # almost became loop, but has a single 1 resolution at the top
-    complete_bottom = [] # almost became loop, but has a single 1 resolution at the bottom
-
-    print(state + "\n")
-    print(str(numStrands - 1) + "\n")
-    # reads the kaufman state right to left
-    for reptition in range(required_repitions):
-        for element_index in range(numStrands - 2, -1, -1):
-            strand_index = numStrands - 2 - element_index
-            position_from_right = (reptition * (numStrands - 1)) + strand_index
-            has_element = kauf_state >> (position_from_right) & 0b1
-            print(f" {position_from_right}, {strand_index} and is of {state[len(state) - 1 - position_from_right]}")
-
-            if has_element:
-                print(f"element found at position from right: {position_from_right} and is of {state[len(state) - 1 - position_from_right]}")
-                print(f"before: {forward_strands} ")
-                # which forward facing strands the backfacing strand is connected to, if any
-                backfacing_connection = [element_index, element_index + 1]
-                rightmost_position = min(forward_strands[element_index][1], forward_strands[element_index + 1][1]) 
-                #strand_id = forward_strands[element_index][1]
-                lowest = min(forward_strands[element_index][2], forward_strands[element_index + 1][2]) 
-                highest = max(forward_strands[element_index][3], forward_strands[element_index + 1][3]) 
-                
-                top_merged = False
-                bottom_merged = False
-
-                forward_strands[element_index][1] = rightmost_position
-                forward_strands[element_index + 1][1] = rightmost_position
-
-                # if the connected end has a pre-existing assigned strand
-                if forward_strands[backfacing_connection[0]][0] >= 0:
-                    print(f"merged bottom")
-                    bottom_merged = True
-                    backfacing_connection[0] = forward_strands[backfacing_connection[0]][0]
-                    rightmost_position = min(rightmost_position, forward_strands[backfacing_connection[0]][1]) # get the rightmost starting position_from_right
-                    lowest = min(lowest,  forward_strands[backfacing_connection[0]][2])
-                    highest = max(highest,  forward_strands[backfacing_connection[0]][3])
-
-
-                    if forward_strands[backfacing_connection[1]][0] >= 0:
-                        print(f"merged top")
-                        top_merged = True
-                        backfacing_connection[1] = forward_strands[backfacing_connection[1]][0] # the new strand is connected to the old strand's other end
-                        rightmost_position = min(rightmost_position, forward_strands[backfacing_connection[1]][1]) # get the rightmost starting position_from_right
-                        lowest = min(lowest,  forward_strands[backfacing_connection[1]][2])
-                        highest = max(highest,  forward_strands[backfacing_connection[1]][3])
-
-                        remove_forwardfacing_strand(forward_strands, backfacing_connection[1], rightmost_position) 
-
-                    remove_forwardfacing_strand(forward_strands, backfacing_connection[0], rightmost_position)
-                
-                elif forward_strands[backfacing_connection[1]][0] >= 0:
-                    print(f"merged top")
-                    top_merged = True
-                    backfacing_connection[1] = forward_strands[backfacing_connection[1]][0] # the new strand is connected to the old strand's other end
-                    rightmost_position = min(rightmost_position, forward_strands[backfacing_connection[1]][1]) # get the rightmost starting position_from_right
-                    lowest = min(lowest,  forward_strands[backfacing_connection[1]][2])
-                    highest = max(highest,  forward_strands[backfacing_connection[1]][3])
-
-                    remove_forwardfacing_strand(forward_strands, backfacing_connection[1], rightmost_position) 
-
-
-
-                print(f"backfacing connections: {backfacing_connection}")
-                # something had to merge so rightmost_position has been properly set
-                if backfacing_connection[0] == backfacing_connection[1]:
-                    #print("closed loop found")
-                    closed_loops.append((rightmost_position, position_from_right, lowest, highest))
-
-                # if connected to two ends, re add since can still be closed
-                # 1 and 0 connections don't have anything to re add
-                elif bottom_merged and top_merged:
-                    add_forwardfacing_strand(forward_strands, backfacing_connection, rightmost_position, lowest, highest)
-
-                print(f"merged: {forward_strands} ")
-
-                print(f"waiting strands before {waiting_for}")
-
-                # only need to check multiple if merged to them
-                # in the one case, we need to track which side got merged since
-                print(f"searching gaps [{lowest}, {highest}]")
-                for affected_index in range(lowest, min(highest + 1, numStrands - 1)): # check if the connected portions fullfilled their conditions
-                    print(f"affected index {affected_index}, element_index {element_index}, comparing {waiting_for[affected_index][0]} and {rightmost_position}")
-                    # other side of pinch only comes every other
-                    if(affected_index % 2 == element_index % 2):
-                        print(f"not affecting the other end")
-                        continue
-                    print(f"made it past, waiting for {waiting_for[affected_index][0]}, rightmost is {rightmost_position}")
-                    if(waiting_for[affected_index][0] == rightmost_position):
-                        print(f"pinch found at {waiting_for[affected_index][1]}")
-                        #if pinch in closed loop
-                        if waiting_for[affected_index][0] >= 0:
-                            print(f"closed")
-                            if(affected_index < numStrands - 1):
-                                complete_bottom.append(waiting_for[affected_index][1])
-                            if(affected_index > 0):
-                                complete_top.append(waiting_for[affected_index][1])
-
-                        # if pinch in non closed loop
-                        else:
-                            print(f"not closed")
-                            if element_index + 1 < backfacing_connection[1]:
-                                complete_bottom.append(waiting_for[affected_index][1])
-                            elif element_index >= backfacing_connection[0]:
-                                complete_top.append(waiting_for[affected_index][1])
-
-                        # if neither case, then this gap was overwritten by a different resolution
-                        waiting_for[affected_index][0] = None
-                        waiting_for[affected_index][1] = None
-                        
-                
-                # what strand we're expecting and where it's recorded to start from
-                waiting_for[element_index][0] = forward_strands[backfacing_connection[0]][1]
-                waiting_for[element_index][1] = position_from_right
-
-                print(f"waiting strands after {waiting_for}")
-
-                # regardless of what happens, the forward facing strand of the inital backfacing strand will be added
-                add_forwardfacing_strand(forward_strands, (element_index, element_index + 1), position_from_right, element_index, element_index + 1)
-                print(f"added: {forward_strands} ")
-                print(f"")
-
-    return [sorted(closed_loops), complete_bottom, complete_top]
-
-
-
 def add_forwardfacing_strand(
     forward_strands: list[list[int, int]],
     ends: tuple[int, int],
-    position_from_right: int,
+    string_index: int,
     lowest: int,
     highest: int
     ) -> None:
-    forward_strands[ends[0]][0] = ends[1]
-    forward_strands[ends[0]][1] = position_from_right
-    forward_strands[ends[0]][2] = lowest
-    forward_strands[ends[0]][3] = highest
+    if(ends[0] >= 0): # if the end doesn't connect to an end
+        forward_strands[ends[0]][0] = ends[1]
+        forward_strands[ends[0]][1] = string_index
+        forward_strands[ends[0]][2] = lowest
+        forward_strands[ends[0]][3] = highest
 
-    forward_strands[ends[1]][0] = ends[0]
-    forward_strands[ends[1]][1] = position_from_right
-    forward_strands[ends[1]][2] = lowest
-    forward_strands[ends[1]][3] = highest
+    if(ends[1] >= 0):
+        forward_strands[ends[1]][0] = ends[0]
+        forward_strands[ends[1]][1] = string_index
+        forward_strands[ends[1]][2] = lowest
+        forward_strands[ends[1]][3] = highest
 
 
 
@@ -369,23 +219,127 @@ def add_forwardfacing_strand(
 def remove_forwardfacing_strand(
     forward_strands: list[list[int, int]],
     this_end: int, # one end points to the other end so only one is needed
-    rightmost_position : int # need to record is this strand is connected to a loop or the ends
+    string_index : int # need to record is this strand is connected to a loop or the ends
     ) -> None:
     other_end = forward_strands[this_end][0]
     forward_strands[other_end][0] = -1
-    forward_strands[other_end][1] = rightmost_position
-    # forward_strands[other_end][2] = -1
-    # forward_strands[other_end][3] = -1
+    forward_strands[other_end][1] = string_index
+    forward_strands[other_end][2] = -1
+    forward_strands[other_end][3] = -1
     
     forward_strands[this_end][0] = -1
-    forward_strands[this_end][1] =  rightmost_position
-    # forward_strands[this_end][2] = -1
-    # forward_strands[this_end][3] = -1
+    forward_strands[this_end][1] =  string_index
+    forward_strands[this_end][2] = -1
+    forward_strands[this_end][3] = -1
+
+"""
+"""
+def detect_features(
+    state: str,
+    numStrands: int
+) -> list[tuple[int, int], list[int], list[int]]:
+    # The logic of this functions works on the left and right portions of the 1 resolution
+    # the left portion connects existing strands
+    # the right portion prepares a new strand
+    # pinches are just left and right portions which are part of the same strand
+
+    kauf_state = int(state, 2)
+
+    # tracks where each forward facing strand is connected to, if any
+    # we can use earliest in the kauffman state as ID's for each stand
+    # [other strand end, strand id(earliest resolution), lowest strand, highest strand]
+    # forward_strands[0] represents the lowest strand
+    forward_strands = [[-1, -1 * index, index - 1, index - 1] for index in range(1, numStrands + 1)]
+    # tracks the left part of resolution, waits for right part of resolution to be determined, if matchin, have a pinch
+    # [expected strand id, index of resolution, has bottom strand, has top strand]
+    # waiting_for[0] represents the lowest strand
+    # has bottom strand and has top strand will be used to determine what pinch is occuring
+    waiting_for = [[None, None, None, None] for _ in range(numStrands - 1)]
+
+    closed_loops = []
+    top_pinch = [] # almost became loop, but has a single 1 resolution at the top
+    bottom_pinch = [] # almost became loop, but has a single 1 resolution at the bottom
+
+    print(f"state: {state}")
+    print(f"nums_strands: {numStrands}\n")
+
+    leftmost_resolution = kauf_state.bit_length() - 1
+    for index_from_right in range(leftmost_resolution, -1, -1): # move from left to right
+        string_index = len(state) - 1 - index_from_right # index corresponding to the string representation of the state
+        gap_index = string_index % (numStrands - 1) # the gap corresponding to the resolution at this index
+        has_element = state[string_index] == '1' # if there is a resolution at this index
+        print(f"evaluating index {string_index}, gap {gap_index}, element {state[string_index]}")
+
+        if has_element: # need to add left and right part of resolution
+            # adding left part of resolution
+            # Connecting existing strands so need to gather information for new combined strand
+            bottom_connection = forward_strands[gap_index] # get the connected strand connected
+            top_connection = forward_strands[gap_index + 1]
+            new_ends = [bottom_connection[0], top_connection[0]] 
+            new_earliest = min(bottom_connection[1], top_connection[1]) # acts as a new pseudo strand id
+            print(f"bottom_connection[1]: {bottom_connection[1]}, top_connection[1]: {top_connection[1]}")
+            disposed_id = max(bottom_connection[1], top_connection[1]) # need to update other strand's id
+            new_lowest = min(bottom_connection[2], top_connection[2]) # record how far we'll need to check
+            new_highest = max(bottom_connection[3], top_connection[3])
+
+            # remove the existing strands ends
+            remove_forwardfacing_strand(forward_strands, bottom_connection[0], string_index)
+            remove_forwardfacing_strand(forward_strands, top_connection[0], string_index)
+
+            if(new_earliest > 0 and new_ends[0] == new_ends[1]): # found a closed loop, no need to readd ends since it canceled itself out
+                print(f"found loop: {new_earliest}, {string_index}")
+                closed_loops.append((new_earliest, string_index)) # add the opening(earliest) and closing(current position) of the loop
+            else: # not a closed loop, so update the strand's ends
+                # add new ends, negative ends or ends not in a loop will not be added
+                add_forwardfacing_strand(forward_strands, new_ends, string_index, new_lowest, new_highest)
+
+            for new_gap_index in range(new_lowest, new_highest): # check all potential pinches
+                # combined strand might've updated a previous right portion's strand id, matching it
+                # update the overwritten strand id to new strand
+                if waiting_for[new_gap_index][0] == disposed_id:
+                    waiting_for[new_gap_index][0] = new_earliest
+                
+                # pinches only occur when connecting the right part of the resolution u
+                if (new_gap_index - gap_index) % 2 == 1 and waiting_for[new_gap_index][0] == new_earliest:
+                    # confirmed that both parts of resolution are connected, now just add based on has bottom or has top
+                    if waiting_for[new_gap_index][2]: # has bottom strand, so this pinch is ontop a strand, making it a top pinch
+                        print(f"found a top pinch at {string_index}")
+                        top_pinch.append(string_index)
+                    if waiting_for[new_gap_index][3]: # has top strand, so this pinch is below a strand, making it a bottom pinch
+                        print(f"found a bottom pinch at {string_index}")
+                        bottom_pinch.append(string_index)
+                    waiting_for[new_gap_index] = 0
+
+# =======================================================================================================================
+
+            # add right part of the resolution
+            # set up waiting_for so right 
+            # right part also starts a new strand
+            waiting_for[gap_index] = [new_earliest, string_index, bottom_connection[1] >= 0, top_connection[1] >= 0] 
+            add_forwardfacing_strand(forward_strands, [gap_index, gap_index + 1], string_index, gap_index, gap_index + 1) # add the right part of the resolution
+            print(waiting_for)
+            print(forward_strands)
+            print()
+
+    return [sorted(closed_loops), top_pinch, bottom_pinch]
+
+
+def main():
+    # print(find_features("001111011100", 4))
+    # print(("001111011100", 4))
+    
+    #print(find_features("1111000000001100", 3))
+    print(detect_features("001111010001", 4))
+    
+
+if __name__ == "__main__":
+    main()
+
 
 
 """
 For a given state, find all targets which can be reached by a direct map
-# Returns a tuple (target, isomorphism_type, index) where index is the position_from_right of the
+# Returns a tuple (target, isomorphism_type, index) where index is the index_from_right of the
 # bit to by flipped in the state to reach the target of given isomorphism_type
 """
 def find_direct_targets(
@@ -525,14 +479,3 @@ def backtrack_isomorphism(
 
     return str(int(str(target), 2) - 2**index).zfill(len(target))
 
-
-def main():
-    # print(find_features("001111011100", 4))
-    # print(("001111011100", 4))
-    
-    #print(find_features("1111000000001100", 3))
-    print(find_features("001111010001", 4))
-    
-
-if __name__ == "__main__":
-    main()
