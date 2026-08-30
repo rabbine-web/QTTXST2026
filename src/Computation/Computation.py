@@ -197,19 +197,19 @@ def kauffman_indirect_maps(
 def add_forwardfacing_strand(
     forward_strands: list[list[int, int]],
     ends: tuple[int, int],
-    string_index: int,
+    earliest_index: int,
     lowest: int,
     highest: int
     ) -> None:
     if(ends[0] >= 0): # if the end doesn't connect to an end
         forward_strands[ends[0]][0] = ends[1]
-        forward_strands[ends[0]][1] = string_index
+        forward_strands[ends[0]][1] = earliest_index
         forward_strands[ends[0]][2] = lowest
         forward_strands[ends[0]][3] = highest
 
     if(ends[1] >= 0):
         forward_strands[ends[1]][0] = ends[0]
-        forward_strands[ends[1]][1] = string_index
+        forward_strands[ends[1]][1] = earliest_index
         forward_strands[ends[1]][2] = lowest
         forward_strands[ends[1]][3] = highest
 
@@ -222,15 +222,18 @@ def remove_forwardfacing_strand(
     string_index : int # need to record is this strand is connected to a loop or the ends
     ) -> None:
     other_end = forward_strands[this_end][0]
-    forward_strands[other_end][0] = -1
-    forward_strands[other_end][1] = string_index
-    forward_strands[other_end][2] = -1
-    forward_strands[other_end][3] = -1
+    print(f"deleting strands {this_end} and {other_end}")
+    if(other_end >= 0):
+        forward_strands[other_end][0] = -1
+        forward_strands[other_end][1] = string_index
+        forward_strands[other_end][2] = -1
+        forward_strands[other_end][3] = -1
     
-    forward_strands[this_end][0] = -1
-    forward_strands[this_end][1] =  string_index
-    forward_strands[this_end][2] = -1
-    forward_strands[this_end][3] = -1
+    if(this_end >= 0):
+        forward_strands[this_end][0] = -1
+        forward_strands[this_end][1] =  string_index
+        forward_strands[this_end][2] = -1
+        forward_strands[this_end][3] = -1
 
 """
 """
@@ -257,8 +260,8 @@ def detect_features(
     waiting_for = [[None, None, None, None] for _ in range(numStrands - 1)]
 
     closed_loops = []
-    top_pinch = [] # almost became loop, but has a single 1 resolution at the top
-    bottom_pinch = [] # almost became loop, but has a single 1 resolution at the bottom
+    pinch_above = [] # almost became loop, but has a single 1 resolution at the top
+    pinch_below = [] # almost became loop, but has a single 1 resolution at the bottom
 
     print(f"state: {state}")
     print(f"nums_strands: {numStrands}\n")
@@ -276,22 +279,14 @@ def detect_features(
             bottom_connection = forward_strands[gap_index] # get the connected strand connected
             top_connection = forward_strands[gap_index + 1]
             new_ends = [bottom_connection[0], top_connection[0]] 
+            print(new_ends)
             new_earliest = min(bottom_connection[1], top_connection[1]) # acts as a new pseudo strand id
+            print(f"new_earliest: {new_earliest}")
             print(f"bottom_connection[1]: {bottom_connection[1]}, top_connection[1]: {top_connection[1]}")
             disposed_id = max(bottom_connection[1], top_connection[1]) # need to update other strand's id
             new_lowest = min(bottom_connection[2], top_connection[2]) # record how far we'll need to check
             new_highest = max(bottom_connection[3], top_connection[3])
 
-            # remove the existing strands ends
-            remove_forwardfacing_strand(forward_strands, bottom_connection[0], string_index)
-            remove_forwardfacing_strand(forward_strands, top_connection[0], string_index)
-
-            if(new_earliest > 0 and new_ends[0] == new_ends[1]): # found a closed loop, no need to readd ends since it canceled itself out
-                print(f"found loop: {new_earliest}, {string_index}")
-                closed_loops.append((new_earliest, string_index)) # add the opening(earliest) and closing(current position) of the loop
-            else: # not a closed loop, so update the strand's ends
-                # add new ends, negative ends or ends not in a loop will not be added
-                add_forwardfacing_strand(forward_strands, new_ends, string_index, new_lowest, new_highest)
 
             for new_gap_index in range(new_lowest, new_highest): # check all potential pinches
                 # combined strand might've updated a previous right portion's strand id, matching it
@@ -303,25 +298,37 @@ def detect_features(
                 if (new_gap_index - gap_index) % 2 == 1 and waiting_for[new_gap_index][0] == new_earliest:
                     # confirmed that both parts of resolution are connected, now just add based on has bottom or has top
                     if waiting_for[new_gap_index][2]: # has bottom strand, so this pinch is ontop a strand, making it a top pinch
-                        print(f"found a top pinch at {string_index}")
-                        top_pinch.append(string_index)
+                        print(f"found a top pinch at {waiting_for[new_gap_index][1]}")
+                        pinch_above.append(waiting_for[new_gap_index][1])
                     if waiting_for[new_gap_index][3]: # has top strand, so this pinch is below a strand, making it a bottom pinch
-                        print(f"found a bottom pinch at {string_index}")
-                        bottom_pinch.append(string_index)
-                    waiting_for[new_gap_index] = 0
+                        print(f"found a bottom pinch at {waiting_for[new_gap_index][1]}")
+                        pinch_below.append(waiting_for[new_gap_index][1])
 
 # =======================================================================================================================
 
             # add right part of the resolution
-            # set up waiting_for so right 
-            # right part also starts a new strand
-            waiting_for[gap_index] = [new_earliest, string_index, bottom_connection[1] >= 0, top_connection[1] >= 0] 
+            # set up waiting_for so right, the right portion also starts a new strand
+
+            # wait for corresponding id, record where the pinch is, check if strand goes lower(implying this is a top), check if this strand goes higher(implying this is a bottom) 
+            waiting_for[gap_index] = [new_earliest, string_index, bottom_connection[1] != gap_index, top_connection[1] != gap_index] 
+
+            # remove the existing strands ends
+            remove_forwardfacing_strand(forward_strands, gap_index, string_index)
+            remove_forwardfacing_strand(forward_strands, gap_index + 1, string_index)
+
+            if(new_earliest > 0 and new_ends[0] == new_ends[1]): # found a closed loop, no need to readd ends since it canceled itself out
+                print(f"found loop: {new_earliest}, {string_index}")
+                closed_loops.append((new_earliest, string_index)) # add the opening(earliest) and closing(current position) of the loop
+            else: # not a closed loop, so update the strand's ends
+                # add new ends, negative ends or ends not in a loop will not be added
+                add_forwardfacing_strand(forward_strands, new_ends, new_earliest, new_lowest, new_highest)
+
             add_forwardfacing_strand(forward_strands, [gap_index, gap_index + 1], string_index, gap_index, gap_index + 1) # add the right part of the resolution
             print(waiting_for)
             print(forward_strands)
             print()
 
-    return [sorted(closed_loops), top_pinch, bottom_pinch]
+    return [sorted(closed_loops), pinch_above, pinch_below]
 
 
 def main():
