@@ -290,10 +290,12 @@ def detect_features(
             # pinches occur when 2 existing strands connect at a resolution, with one strand on the left partition, the other on the right
             for new_gap_index in range(bottom_connection[2], bottom_connection[3]):
                 if  waiting_for[new_gap_index][0] == top_connection[1]:
+                    # can only complete pinch at right portions, which are odd parity away since gap_index is adding a left portion
                     if (new_gap_index - gap_index) % 2 == 1:
-                        if new_gap_index < gap_index:
-                            pinch_above.append(waiting_for[new_gap_index][1])
+                        # if the other side is above or below the gap connecting the two strands
                         if new_gap_index > gap_index:
+                            pinch_above.append(waiting_for[new_gap_index][1])
+                        if new_gap_index < gap_index:
                             pinch_below.append(waiting_for[new_gap_index][1])
                         waiting_for[new_gap_index][0] = None
                     else:
@@ -302,9 +304,9 @@ def detect_features(
             for new_gap_index in range(top_connection[2], top_connection[3]):
                 if  waiting_for[new_gap_index][0] == bottom_connection[1]:
                     if (new_gap_index - gap_index) % 2 == 1:
-                        if new_gap_index < gap_index:
-                            pinch_above.append(waiting_for[new_gap_index][1])
                         if new_gap_index > gap_index:
+                            pinch_above.append(waiting_for[new_gap_index][1])
+                        if new_gap_index < gap_index:
                             pinch_below.append(waiting_for[new_gap_index][1])
                         waiting_for[new_gap_index][0] = None
                     else:
